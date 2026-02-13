@@ -138,6 +138,7 @@
 #define TLV320DAC3100_REG_DRC_LPF_D1H   0x18 // DRC Low Pass Filter Coeff D1 (15:8)
 #define TLV320DAC3100_REG_DRC_LPF_D1L   0x19 // DRC Low Pass Filter Coeff D1 (7:0)
 
+#ifdef _DEBUG_
 //
 // selecting various DAC registers for serial printout (just for debugging purposes)
 //
@@ -152,6 +153,7 @@
 #define Px_BQF 0x0200
 #define Px_IIR 0x1000
 #define P9_DRC 0x2000
+#endif
 
 typedef enum {
   TLV320_DRC_THRESHOLD_MINUS_3DB  = 0b000,  //  -3dB
@@ -265,7 +267,7 @@ typedef struct
   float bw     { 0.0};                      // Hz, bandwidth (only notch and EQ)
   float gain   { 0.0 };                     // dB, filter gain (default is 0)
   float Q      { 0.0 };                     // filter quality factor (can be given instead of bandwidth)
-  float S      { 1.0 };                     // shelfing factor for bass/treble shelf filter
+  //float S      { 1.0 };                     // shelfing factor for bass/treble shelf filter
   uint8_t N0H  { 0x7F }, N0L { 0xFF },      // filter coefficients, default is linear filter
           N1H  { 0 },    N1L { 0 }, 
           N2H  { 0 },    N2L { 0 },
