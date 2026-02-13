@@ -1,0 +1,42 @@
+#######################################
+# Syntax Coloring Map For Test
+#######################################
+
+#######################################
+# Datatypes (KEYWORD1)
+#######################################
+
+TLV320DAC3101	KEYWORD1
+tlv320_drc_threshold_t  KEYWORD1
+tlv320_drc_hyst_t	KEYWORD1
+tlv320_drc_hold_time_t	KEYWORD1
+tlv320_drc_attack_rate_t	KEYWORD1
+tlv320_filter_channel_t	KEYWORD1
+tlv320_filter_section_t	KEYWORD1
+tlv320_filter_type_t	KEYWORD1
+tlv320_filter_cfg_t	KEYWORD1
+
+#######################################
+# Methods and Functions (KEYWORD2)
+#######################################
+
+setPage	KEYWORD2
+getRegisterValue	KEYWORD2
+enableSpeaker	KEYWORD2
+configureSPK_PGA	KEYWORD2
+setSPKVolume	KEYWORD2
+setDRC	KEYWORD2
+powerOnDAC	KEYWORD2
+calculateDACFilterCoeffs	KEYWORD2
+setAdaptiveMode	KEYWORD2
+getAdaptiveMode	KEYWORD2
+setDACFilter		KEYWORD2
+printRegisterSettings	KEYWORD2
+  
+#######################################
+# Constants (LITERAL1)
+#######################################
+
+
+
+
