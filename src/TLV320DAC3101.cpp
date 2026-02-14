@@ -225,11 +225,9 @@ bool TLV320DAC3101::calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg)
     //
     // BiQuad filter (2nd order, needs coeffs N0, N1, N2, D1 and D2)   
     //
-    double a, bw, A, d, g, s, F, G, H, Q, BWoctave = 0, denominator, gd, gn, rho, phi, tanB;
+    double a, bw, A, d, s, F, H, Q, denominator, gd, gn, tanB;
     double cosW = cos(w0);
     double sinW = sin(w0);
-
-    double b, factor;
 
     if (filter_cfg->gain < -12.0 || filter_cfg->gain > 12.0) return false;
     
@@ -318,8 +316,6 @@ bool TLV320DAC3101::calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg)
       case TLV320_FILTER_TYPE_BASS_SHELF:
         A = pow(10, (filter_cfg->gain / 20));
         s = sqrt(2) / 2;
-        rho = M_PI / 2;
-        phi = (filter_cfg->fc / filter_cfg->fs) * M_PI;
 
         if (filter_cfg->gain > -6 && filter_cfg->gain < 6) {
           F = sqrt(A);
@@ -359,8 +355,6 @@ bool TLV320DAC3101::calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg)
       case TLV320_FILTER_TYPE_TREBLE_SHELF:
         A = pow(10, (filter_cfg->gain / 20));
         s = sqrt(2) / 2;
-        rho = M_PI / 2;
-        phi = (filter_cfg->fc / filter_cfg->fs) * M_PI;
 
         if (filter_cfg->gain > -6 && filter_cfg->gain < 6) {
           F = sqrt(A);
