@@ -56,7 +56,7 @@ void setup() {
   
   Serial.println();
   Serial.printf("2nd order Notch Filter Coefficients for fs=%.0fHz, bandwidth=%.0fHz and gain=%.1fdB:\n", 
-                notch.fs, notch.Q, notch.bw, notch.gain);
+                notch.fs, notch.bw, notch.gain);
   Serial.printf("fc       N0      N1      N2      D1      D2\n");
   for (float fc = 100.0; fc <= notch.fs / 2 - 100; fc += 100.0) {
     notch.fc = fc;
