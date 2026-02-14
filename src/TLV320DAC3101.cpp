@@ -225,9 +225,11 @@ bool TLV320DAC3101::calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg)
     //
     // BiQuad filter (2nd order, needs coeffs N0, N1, N2, D1 and D2)   
     //
-    double a, A, d, g, s, F, G, H, Q, BWoctave = 0, denominator, gd, gn, rho, phi, tanB;
+    double a, bw, A, d, g, s, F, G, H, Q, BWoctave = 0, denominator, gd, gn, rho, phi, tanB;
     double cosW = cos(w0);
     double sinW = sin(w0);
+
+    double b, factor;
 
     if (filter_cfg->gain < -12.0 || filter_cfg->gain > 12.0) return false;
     
@@ -261,16 +263,18 @@ bool TLV320DAC3101::calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg)
         break;
 
       case TLV320_FILTER_TYPE_NOTCH:
-        if ((filter_cfg->bw == 0 && filter_cfg->Q == 0) || 
-            filter_cfg->bw < 0 || filter_cfg->bw > ((filter_cfg->fs / 2) - 100)) {
-          return false;
-        }
-        
-        // BWoctave = calcBWoctave(filter_cfg->fc, filter_cfg->bw);
-        // Q = 1 / (2 * sinh((log(2) / 2) * BWoctave * (w0 / sinW))); // calculate Q just for info purposes
-        // Q = filter_cfg->fc / filter_cfg->bw; ?
+        if (filter_cfg->bw <= 0 && filter_cfg->Q == 0) return false;
 
-        tanB = tan(M_PI * filter_cfg->bw / filter_cfg->fs);
+        // bandwidth preferred over Q
+        if (filter_cfg->bw > 0) {
+          bw = filter_cfg->bw;
+        }
+        else {
+          bw = 2 * filter_cfg->fc * sinh((sinW / w0) * asinh(1 / (2 * filter_cfg->Q)));
+        }
+        if (bw > ((filter_cfg->fs / 2) - 100)) return false;
+
+        tanB = tan(M_PI * bw / filter_cfg->fs);
         A = pow(10, filter_cfg->gain / 20);
         a = ((1 - tanB) / (1 + tanB));
         d = -cosW;
@@ -285,16 +289,18 @@ bool TLV320DAC3101::calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg)
         break;
 
       case TLV320_FILTER_TYPE_EQ:
-        if ((filter_cfg->bw == 0 && filter_cfg->Q == 0) || 
-            filter_cfg->bw < 0 || filter_cfg->bw > (filter_cfg->fs / 2) - 100) {
-          return false;
-        }      
+        if (filter_cfg->bw <= 0 && filter_cfg->Q == 0) return false;
 
-        // BWoctave = calcBWoctave(filter_cfg->fc, filter_cfg->bw);
-        // Q = 1 / (2 * sinh((log(2) / 2) * BWoctave * (w0 / sinW))); // calculate Q just for info purposes
-        // Q = filter_cfg->fc / filter_cfg->bw; ?
+        // bandwidth preferred over Q
+        if (filter_cfg->bw > 0) {
+          bw = filter_cfg->bw;
+        }
+        else {
+          bw = 2 * filter_cfg->fc * sinh((sinW / w0) * asinh(1 / (2 * filter_cfg->Q)));
+        }
+        if (bw > ((filter_cfg->fs / 2) - 100)) return false;     
 
-        tanB = tan(M_PI * filter_cfg->bw / filter_cfg->fs);
+        tanB = tan(M_PI * bw / filter_cfg->fs);
         A = pow(10, filter_cfg->gain / 20);
         H = A - 1;
         a = (A < 1) ? ((tanB - A) / (tanB + A)) : ((tanB - 1) / (tanB + 1));
@@ -831,7 +837,7 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
     }       
   }  
 
-  // to be implemented if needed
+  // tbd
   // if (select & (Px_BQC)) {
   // }
   // if (select & (Px_BQD)) {

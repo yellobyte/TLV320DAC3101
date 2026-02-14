@@ -40,6 +40,7 @@
 #define TLV320DAC3100_REG_DRC_CONTROL_1 0x44 // DRC Control 1 Register 
 #define TLV320DAC3100_REG_DRC_CONTROL_2 0x45 // DRC Control 2 Register 
 #define TLV320DAC3100_REG_DRC_CONTROL_3 0x46 // DRC Control 3 Register 
+
 // Pages 8/12 DAC Coefficient-RAM A/B
 #define TLV320DAC3100_REG_DAC_CRAM_CTRL 0x01 // DAC C-RAM Control Register
 #define TLV320DAC3100_REG_DAC_LBQA_N0H  0x02 // DAC Left BiQuadA Coeff N0 (15:8)
@@ -108,7 +109,7 @@
 #define TLV320DAC3100_REG_DAC_RBQC_D2H  0x5E // DAC Right BiQuadC Coeff D2 (15:8)
 #define TLV320DAC3100_REG_DAC_RBQC_D2L  0x5F // DAC Right BiQuadC Coeff D2 (7:0)
 
-// BQD...BQF 
+// BQD...BQF tbd
 
 // Page 9/13 DAC Coefficient-RAM
 #define TLV320DAC3100_REG_DAC_LIIR_N0H   0x02 // DAC Left IIR Filter Coeff N0 (15:8)
@@ -297,9 +298,11 @@ public:
     bool setDACFilter(tlv320_filter_cfg_t *filter_cfg);
     bool setAdaptiveMode(bool enabled);
     bool getAdaptiveMode();
-    // just for debugging purposes
+
+#ifdef _DEBUG_
     void printRegisterSettings(const char *s = "", uint16_t select = (uint16_t)0xFFFF);
-    
+#endif    
+
 private:
   bool setPage(uint8_t page);
   uint32_t float2Hex(double floatN, int bits = 16);
