@@ -258,7 +258,7 @@ typedef enum {
 
 typedef struct 
 {
-  bool enabled { true };                    // enable/disable filter
+  bool enabled { false };                   // enable/disable filter
   tlv320_filter_section_t section;          // filter section: IIR, BiQuadA, BiQuadB, etc.
   tlv320_filter_channel_t channel           // settings apply to left, right or both channels,
                { TLV320_FILTER_CHAN_ALL };  // default is left AND right
@@ -276,6 +276,25 @@ typedef struct
           D2H  { 0 },    D2L { 0 };
 } tlv320_filter_cfg_t;
 
+typedef struct 
+{
+  bool enabled { false };                             // enable/disable DRC
+  tlv320_drc_threshold_t threshold                   // default as recommended in Ch. 6.3.10.4.1 
+          { TLV320_DRC_THRESHOLD_MINUS_24DB };  
+  tlv320_drc_hyst_t hyst                             // default as recommended in Ch. 6.3.10.4.2
+          { TLV320_DRC_HYST_3DB }; 
+  tlv320_drc_hold_time_t hold                        // default as recommended in Ch. 6.3.10.4.3
+          { TLV320_DRC_HOLD_TIME_DISABLED };
+  tlv320_drc_attack_rate_t attack                    // default as recommended in Ch. 6.3.10.4.4
+          { TLV320_DRC_ATTACK_RATE_0_00195312DB };
+  tlv320_drc_decay_rate_t decay                      // default as recommended in Ch. 6.3.10.4.5
+          { TLV320_DRC_DECAY_RATE_0_000244140DB };
+  uint8_t *hpf_buf       { NULL };                   // pointer to values for DRC HPF
+  uint8_t hpf_buf_length { 0 };
+  uint8_t *lpf_buf       { NULL };                   // pointer to values for DRC LPF
+  uint8_t lpf_buf_length { 0 };
+} tlv320_drc_cfg_t;
+
 class TLV320DAC3101 : public Adafruit_TLV320DAC3100 {
 public:
   TLV320DAC3101() : Adafruit_TLV320DAC3100() {};   // Constructor
@@ -285,19 +304,12 @@ public:
   bool configureSPK_PGA(tlv320_spk_gain_t gain, bool unmute);
   
   bool setSPKVolume(bool route_enabled, uint8_t gain);
-  bool setDRC(bool enabled, 
-    tlv320_drc_threshold_t threshold = TLV320_DRC_THRESHOLD_MINUS_24DB, 
-    tlv320_drc_hyst_t hysteresis = TLV320_DRC_HYST_2DB,
-    tlv320_drc_hold_time_t hold_time = TLV320_DRC_HOLD_TIME_DISABLED, 
-    tlv320_drc_attack_rate_t attack_rate = TLV320_DRC_ATTACK_RATE_0_00195312DB,
-    tlv320_drc_decay_rate_t decay_rate = TLV320_DRC_DECAY_RATE_0_000244140DB,
-    uint8_t *hpf_buf = NULL, uint8_t hpf_buf_length = 0,
-    uint8_t *lpf_buf = NULL, uint8_t lpf_buf_length = 0);
-    bool powerOnDAC(bool left_dac_on, bool right_dac_on);
-    bool calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg);
-    bool setDACFilter(tlv320_filter_cfg_t *filter_cfg);
-    bool setAdaptiveMode(bool enabled);
-    bool getAdaptiveMode();
+  bool setDRC(tlv320_drc_cfg_t *drc_cfg);
+  bool powerOnDAC(bool left_dac_on, bool right_dac_on);
+  bool calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg);
+  bool setDACFilter(tlv320_filter_cfg_t *filter_cfg);
+  bool setAdaptiveMode(bool enabled);
+  bool getAdaptiveMode();
 
 #ifdef _DEBUG_
     void printRegisterSettings(const char *s = "", uint16_t select = (uint16_t)0xFFFF);

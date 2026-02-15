@@ -100,44 +100,46 @@ bool TLV320DAC3101::setSPKVolume(bool route_enabled, uint8_t gain)
   return volR.write(gain);
 }
 
-// static inline uint8_t drc_hpf_buf[6] = {0x7F, 0xAB, 0x80, 0x55, 0x7F, 0x56};
-// static inline uint8_t drc_lpf_buf[6] = {0x00, 0x11, 0x00, 0x11, 0x7F, 0xDE};
-
 // Should only be called when DACs are powered down !
-bool TLV320DAC3101::setDRC(bool enabled, tlv320_drc_threshold_t threshold, tlv320_drc_hyst_t hysteresis,
-            tlv320_drc_hold_time_t hold_time, tlv320_drc_attack_rate_t attack_rate,
-            tlv320_drc_decay_rate_t decay_rate, uint8_t *hpf_buf, uint8_t hpf_buf_length,
-            uint8_t *lpf_buf, uint8_t lpf_buf_length) 
+bool TLV320DAC3101::setDRC(tlv320_drc_cfg_t *drc_cfg) 
 {
-  if (!setPage(0)) return false;
+  // default coefficients for DRC filter (LPF & HPF)
+  uint8_t drc_hpf_buf[6] = {0x7F, 0xF7, 0x80, 0x09, 0x7F, 0xEF};
+  uint8_t drc_lpf_buf[6] = {0x00, 0x11, 0x00, 0x11, 0x7F, 0xDE}; 
 
+  uint8_t *drc_hpf_coeffs = drc_cfg->enabled ? drc_cfg->hpf_buf : drc_hpf_buf;
+  uint8_t *drc_lpf_coeffs = drc_cfg->enabled ? drc_cfg->lpf_buf : drc_lpf_buf;
+  uint8_t drc_hpf_coeffs_length = drc_cfg->enabled ? drc_cfg->hpf_buf_length : sizeof(drc_hpf_buf);
+  uint8_t drc_lpf_coeffs_length = drc_cfg->enabled ? drc_cfg->lpf_buf_length : sizeof(drc_lpf_buf);
+
+  if (!setPage(0)) return false;
   Adafruit_BusIO_Register drc1 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_1);
   Adafruit_BusIO_RegisterBits drc1En = Adafruit_BusIO_RegisterBits(&drc1, 2, 5);
   Adafruit_BusIO_RegisterBits drc1thres = Adafruit_BusIO_RegisterBits(&drc1, 3, 2);
   Adafruit_BusIO_RegisterBits drc1hyst = Adafruit_BusIO_RegisterBits(&drc1, 2, 0);
-  if (!drc1En.write(enabled ? 0b11 : 0b00)) return false;
-  if (!enabled) return true;  // no reason to continue here, DRC is disabled
+  if (!drc1En.write(drc_cfg->enabled ? 0b11 : 0b00)) return false;
+  if (!drc_cfg->enabled) return true;  // no reason to continue here, DRC is disabled
 
-  if (!drc1thres.write(threshold)) return false;
-  if (!drc1hyst.write(hysteresis)) return false;
+  if (!drc1thres.write(drc_cfg->threshold)) return false;
+  if (!drc1hyst.write(drc_cfg->hyst)) return false;
   Adafruit_BusIO_Register drc2 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_2);
   Adafruit_BusIO_RegisterBits drc2hold = Adafruit_BusIO_RegisterBits(&drc2, 4, 3);
-  if (!drc2hold.write(hold_time)) return false;
+  if (!drc2hold.write(drc_cfg->hold)) return false;
   Adafruit_BusIO_Register drc3 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_3);
   Adafruit_BusIO_RegisterBits drc3attack = Adafruit_BusIO_RegisterBits(&drc3, 4, 4);  
   Adafruit_BusIO_RegisterBits drc3decay = Adafruit_BusIO_RegisterBits(&drc3, 4, 0);  
-  if (!drc3attack.write(attack_rate)) return false;
-  if (!drc3decay.write(decay_rate)) return false;
+  if (!drc3attack.write(drc_cfg->attack)) return false;
+  if (!drc3decay.write(drc_cfg->decay)) return false;
 
   // setting DRC LPF/HPF coefficients
   if (!setPage(9)) return false;
-  if (hpf_buf && hpf_buf_length) {
+  if (drc_hpf_coeffs && drc_hpf_coeffs_length) {
     Adafruit_BusIO_Register drc_hpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
-    if (!(drc_hpf.write(hpf_buf, hpf_buf_length))) return false;
+    if (!(drc_hpf.write(drc_hpf_coeffs, drc_hpf_coeffs_length))) return false;
   }
-  if (lpf_buf && lpf_buf_length) {
+  if (drc_lpf_coeffs && drc_lpf_coeffs_length) {
     Adafruit_BusIO_Register drc_lpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_LPF_N0H);  
-    if (!(drc_lpf.write(lpf_buf, lpf_buf_length))) return false;
+    if (!(drc_lpf.write(drc_lpf_coeffs, drc_lpf_coeffs_length))) return false;
   }
 
   return true;
