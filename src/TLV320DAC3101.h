@@ -278,7 +278,7 @@ typedef struct
 
 typedef struct 
 {
-  bool enabled { false };                             // enable/disable DRC
+  bool enabled { false };                            // enable/disable DRC
   tlv320_drc_threshold_t threshold                   // default as recommended in Ch. 6.3.10.4.1 
           { TLV320_DRC_THRESHOLD_MINUS_24DB };  
   tlv320_drc_hyst_t hyst                             // default as recommended in Ch. 6.3.10.4.2
@@ -289,9 +289,9 @@ typedef struct
           { TLV320_DRC_ATTACK_RATE_0_00195312DB };
   tlv320_drc_decay_rate_t decay                      // default as recommended in Ch. 6.3.10.4.5
           { TLV320_DRC_DECAY_RATE_0_000244140DB };
-  uint8_t *hpf_buf       { NULL };                   // pointer to values for DRC HPF
+  uint8_t *hpf_buf       { NULL };                   // pointer to DRC HPF coefficients
   uint8_t hpf_buf_length { 0 };
-  uint8_t *lpf_buf       { NULL };                   // pointer to values for DRC LPF
+  uint8_t *lpf_buf       { NULL };                   // pointer to DRC LPF coefficients
   uint8_t lpf_buf_length { 0 };
 } tlv320_drc_cfg_t;
 

@@ -158,9 +158,6 @@ bool TLV320DAC3101::powerOnDAC(bool left_dac_on, bool right_dac_on)
   return true;
 }  
 
-#ifdef _DEBUG_
-__attribute__((optimize("O0")))
-#endif
 bool TLV320DAC3101::calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg) 
 {
   double alpha, a0, a1, a2, b0, b1, b2, factor, w0;
@@ -447,9 +444,6 @@ bool TLV320DAC3101::getAdaptiveMode()
   return cram_adaptive.read();
 }
 
-#ifdef _DEBUG_
-__attribute__((optimize("O0")))
-#endif  
 bool TLV320DAC3101::setDACFilter(tlv320_filter_cfg_t *filter_cfg) 
 {
   // default coefficients for setting a filter section back to linear (default)
