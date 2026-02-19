@@ -153,7 +153,7 @@
 #define Px_BQE 0x0100
 #define Px_BQF 0x0200
 #define Px_IIR 0x1000
-#define P9_DRC 0x2000
+#define Px_DRC 0x2000
 #endif
 
 typedef enum {
@@ -232,53 +232,41 @@ typedef enum {
 } tlv320_drc_decay_rate_t;
 
 typedef enum {
-  TLV320_FILTER_CHAN_ALL = 0,          // filter settings apply to left and right channel
-  TLV320_FILTER_CHAN_LEFT,             // filter settings apply to left channel only
-  TLV320_FILTER_CHAN_RIGHT,            // filter settings apply to right channel only
-} tlv320_filter_channel_t;
+  TLV320_FILTER_BIQUAD_A = 0,  // BIQUAD_A (2nd order filter)
+  TLV320_FILTER_BIQUAD_B,      // BIQUAD_B (2nd order filter)
+  TLV320_FILTER_BIQUAD_C,      // BIQUAD_C (2nd order filter)
+  TLV320_FILTER_BIQUAD_D,      // BIQUAD_D (2nd order filter)
+  TLV320_FILTER_BIQUAD_E,      // BIQUAD_E (2nd order filter)
+  TLV320_FILTER_BIQUAD_F,      // BIQUAD_F (2nd order filter)
+  TLV320_FILTER_BIQUAD,        // BIQUAD (in general, 2nd order filter)
+  TLV320_FILTER_IIR,           // IIR (1st order filter)
+} tlv320_filter_t;
 
 typedef enum {
-  TLV320_FILTER_SECTION_BIQUAD_A = 0,  // BIQUAD_A section (2nd order filter)
-  TLV320_FILTER_SECTION_BIQUAD_B,      // BIQUAD_B section (2nd order filter)
-  TLV320_FILTER_SECTION_BIQUAD_C,      // BIQUAD_C section (2nd order filter)
-  TLV320_FILTER_SECTION_BIQUAD_D,      // BIQUAD_D section (2nd order filter)
-  TLV320_FILTER_SECTION_BIQUAD_E,      // BIQUAD_E section (2nd order filter)
-  TLV320_FILTER_SECTION_BIQUAD_F,      // BIQUAD_F section (2nd order filter)
-  TLV320_FILTER_SECTION_IIR,           // IIR section (1st order filter)
-} tlv320_filter_section_t;
-
-typedef enum {
-  TLV320_FILTER_TYPE_LOW_PASS = 0,     // low pass filter (LPF)
-  TLV320_FILTER_TYPE_HIGH_PASS,        // high pass filter (HPF)
-  TLV320_FILTER_TYPE_NOTCH,            // notch filter
-  TLV320_FILTER_TYPE_EQ,               // peaking EQ filter
-  TLV320_FILTER_TYPE_BASS_SHELF,       // bass shelf filter
-  TLV320_FILTER_TYPE_TREBLE_SHELF      // treble shelf filter
+  TLV320_FILTER_TYPE_LOW_PASS = 0,  // low pass filter (LPF)
+  TLV320_FILTER_TYPE_HIGH_PASS,     // high pass filter (HPF)
+  TLV320_FILTER_TYPE_NOTCH,         // notch filter
+  TLV320_FILTER_TYPE_EQ,            // peaking EQ filter
+  TLV320_FILTER_TYPE_BASS_SHELF,    // bass shelf filter
+  TLV320_FILTER_TYPE_TREBLE_SHELF   // treble shelf filter
 } tlv320_filter_type_t;
 
 typedef struct 
 {
-  bool enabled { false };                   // enable/disable filter
-  tlv320_filter_section_t section;          // filter section: IIR, BiQuadA, BiQuadB, etc.
-  tlv320_filter_channel_t channel           // settings apply to left, right or both channels,
-               { TLV320_FILTER_CHAN_ALL };  // default is left AND right
-  tlv320_filter_type_t    type;             // filter type: low pass, high pass, notch, etc.
-  float fs     { 44100 };                   // sample frequency (e.g. 16000, 32000, 44100(default), 48000)
-  float fc     { 0 };                       // -3dB corner frequency (LPF, HPF) or center frequency (notch, EQ)
-  float bw     { 0.0};                      // Hz, bandwidth (only notch and EQ)
-  float gain   { 0.0 };                     // dB, filter gain (default is 0)
-  float Q      { 0.0 };                     // filter quality factor (can be given instead of bandwidth)
-  //float S      { 1.0 };                     // shelfing factor for bass/treble shelf filter
-  uint8_t N0H  { 0x7F }, N0L { 0xFF },      // filter coefficients, default is linear filter
-          N1H  { 0 },    N1L { 0 }, 
-          N2H  { 0 },    N2L { 0 },
-          D1H  { 0 },    D1L { 0 }, 
-          D2H  { 0 },    D2L { 0 };
-} tlv320_filter_cfg_t;
+  float fc    { 0 };                   // -3dB corner frequency (LPF, HPF) or center frequency (notch, EQ, shelf)
+  float bw    { 0.0};                  // Hz, bandwidth (only notch and EQ)
+  float gain  { 0.0 };                 // dB, filter gain (default is 0)
+  float Q     { 0.0 };                 // filter quality factor (can be given instead of bandwidth)
+  //float S     { 1.0 };                 // shelfing factor for bass/treble shelf filter
+  uint8_t N0H { 0x7F }, N0L { 0xFF },  // filter coefficients, default is linear filter
+          N1H { 0 },    N1L { 0 }, 
+          N2H { 0 },    N2L { 0 },
+          D1H { 0 },    D1L { 0 }, 
+          D2H { 0 },    D2L { 0 };
+} tlv320_filter_param_t;
 
 typedef struct 
 {
-  bool enabled { false };                            // enable/disable DRC
   tlv320_drc_threshold_t threshold                   // default as recommended in Ch. 6.3.10.4.1 
           { TLV320_DRC_THRESHOLD_MINUS_24DB };  
   tlv320_drc_hyst_t hyst                             // default as recommended in Ch. 6.3.10.4.2
@@ -304,10 +292,12 @@ public:
   bool configureSPK_PGA(tlv320_spk_gain_t gain, bool unmute);
   
   bool setSPKVolume(bool route_enabled, uint8_t gain);
-  bool setDRC(tlv320_drc_cfg_t *drc_cfg);
+  bool setDRC(bool enabled, tlv320_drc_cfg_t *drc_cfg);
   bool powerOnDAC(bool left_dac_on, bool right_dac_on);
-  bool calculateDACFilterCoeffs(tlv320_filter_cfg_t *filter_cfg);
-  bool setDACFilter(tlv320_filter_cfg_t *filter_cfg);
+  bool calcDACFilterCoefficients(float sample_frequency, tlv320_filter_type_t type, 
+                                 tlv320_filter_t filter, tlv320_filter_param_t *param);
+  bool setDACFilter(bool enabled, bool left_channel, bool right_channel, 
+                    tlv320_filter_t filter, tlv320_filter_param_t *param);
   bool setAdaptiveMode(bool enabled);
   bool getAdaptiveMode();
 
