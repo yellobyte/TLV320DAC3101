@@ -3,11 +3,8 @@
 
   The lib is build upon the Adafruit TLV320 I2S library and extends it with routines
   for filtering (low/high pass, notch, EQ & shelf using IIR and/or BiQuad filters),
-  dynamic range control DRC, adaptive filtering mode and stereo speaker output
+  dynamic range compression DRC, adaptive filtering mode and stereo speaker output
   for the TLV320DAC3101.
-
-  It also provides a print function which could make debugging code for the rather
-  complex TLV320DAC3101 chip a bit easier.
 
   Copyright (c) 2025 Thomas Jentzsch
 
@@ -100,46 +97,158 @@ bool TLV320DAC3101::setSPKVolume(bool route_enabled, uint8_t gain)
   return volR.write(gain);
 }
 
-// Should only be called when DACs are powered down !
-bool TLV320DAC3101::setDRC(bool enabled, tlv320_drc_cfg_t *drc_cfg)
+bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
+                           tlv320_drc_param_t *drc_param)
 {
   // default coefficients for DRC filter (LPF & HPF)
-  uint8_t drc_hpf_buf[6] = {0x7F, 0xF7, 0x80, 0x09, 0x7F, 0xEF};
-  uint8_t drc_lpf_buf[6] = {0x00, 0x11, 0x00, 0x11, 0x7F, 0xDE};
+  uint8_t drc_lpf_coeffs_default[6] = {0x00, 0x11, 0x00, 0x11, 0x7F, 0xDE};
+  uint8_t drc_hpf_coeffs_default[6] = {0x7F, 0xF7, 0x80, 0x09, 0x7F, 0xEF};
 
-  uint8_t *drc_hpf_coeffs = enabled ? drc_cfg->hpf_buf : drc_hpf_buf;
-  uint8_t *drc_lpf_coeffs = enabled ? drc_cfg->lpf_buf : drc_lpf_buf;
-  uint8_t drc_hpf_coeffs_length = enabled ? drc_cfg->hpf_buf_length : sizeof(drc_hpf_buf);
-  uint8_t drc_lpf_coeffs_length = enabled ? drc_cfg->lpf_buf_length : sizeof(drc_lpf_buf);
+  uint8_t *drc_lpf_coeffs, *drc_hpf_coeffs;
+  bool adaptive_mode, left_dac_on_orig, left_dac_on, right_dac_on_orig, right_dac_on,
+       left_mute_orig = false, right_mute_orig = false;
+  float left_vol_orig = 0, right_vol_orig = 0;
+
+  Adafruit_BusIO_Register drc1 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_1);
+  Adafruit_BusIO_RegisterBits drc1_enable_l = Adafruit_BusIO_RegisterBits(&drc1, 1, 6);
+  Adafruit_BusIO_RegisterBits drc1_enable_r = Adafruit_BusIO_RegisterBits(&drc1, 1, 5);
+  Adafruit_BusIO_RegisterBits drc1_thres = Adafruit_BusIO_RegisterBits(&drc1, 3, 2);
+  Adafruit_BusIO_RegisterBits drc1_hyst = Adafruit_BusIO_RegisterBits(&drc1, 2, 0);
+
+  Adafruit_BusIO_Register drc2 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_2);
+  Adafruit_BusIO_RegisterBits drc2_hold = Adafruit_BusIO_RegisterBits(&drc2, 4, 3);
+
+  Adafruit_BusIO_Register drc3 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_3);
+  Adafruit_BusIO_RegisterBits drc3_attack = Adafruit_BusIO_RegisterBits(&drc3, 4, 4);
+  Adafruit_BusIO_RegisterBits drc3_decay = Adafruit_BusIO_RegisterBits(&drc3, 4, 0);
+
+  Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
+  Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
+  Adafruit_BusIO_RegisterBits rpga_bit(&flag2_reg, 1, 0);
+
+  Adafruit_BusIO_Register vol_ctrl = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_VOL_CTRL);
+  Adafruit_BusIO_RegisterBits left_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 3);
+  Adafruit_BusIO_RegisterBits right_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 2);
+
+  Adafruit_BusIO_Register cram_ctrl_reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_CRAM_CTRL);
+  Adafruit_BusIO_RegisterBits cram_adaptive = Adafruit_BusIO_RegisterBits(&cram_ctrl_reg, 1, 2);
+  Adafruit_BusIO_RegisterBits cram_buffer_switch = Adafruit_BusIO_RegisterBits(&cram_ctrl_reg, 1, 0);
+
+  Adafruit_BusIO_Register dac_path = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_DATAPATH);
+  Adafruit_BusIO_RegisterBits left_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
+  Adafruit_BusIO_RegisterBits right_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
 
   if (!setPage(0)) return false;
-  Adafruit_BusIO_Register drc1 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_1);
-  Adafruit_BusIO_RegisterBits drc1En = Adafruit_BusIO_RegisterBits(&drc1, 2, 5);
-  Adafruit_BusIO_RegisterBits drc1thres = Adafruit_BusIO_RegisterBits(&drc1, 3, 2);
-  Adafruit_BusIO_RegisterBits drc1hyst = Adafruit_BusIO_RegisterBits(&drc1, 2, 0);
-  if (!drc1En.write(enabled ? 0b11 : 0b00)) return false;
-  if (!enabled) return true;  // no reason to continue here, DRC is disabled
 
-  if (!drc1thres.write(drc_cfg->threshold)) return false;
-  if (!drc1hyst.write(drc_cfg->hyst)) return false;
-  Adafruit_BusIO_Register drc2 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_2);
-  Adafruit_BusIO_RegisterBits drc2hold = Adafruit_BusIO_RegisterBits(&drc2, 4, 3);
-  if (!drc2hold.write(drc_cfg->hold)) return false;
-  Adafruit_BusIO_Register drc3 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_3);
-  Adafruit_BusIO_RegisterBits drc3attack = Adafruit_BusIO_RegisterBits(&drc3, 4, 4);
-  Adafruit_BusIO_RegisterBits drc3decay = Adafruit_BusIO_RegisterBits(&drc3, 4, 0);
-  if (!drc3attack.write(drc_cfg->attack)) return false;
-  if (!drc3decay.write(drc_cfg->decay)) return false;
+  if (!drc1_enable_l.write(enable)) return false;
+  if (!drc1_enable_r.write(enable)) return false;
+
+  if (!enable) return true;             // no reason to continue here, DRC has been disabled
+
+  if (drc_param != NULL) {
+    // possibly non-standard parameters given
+    if (!drc1_thres.write(drc_param->threshold)) return false;
+    if (!drc1_hyst.write(drc_param->hyst)) return false;
+    if (!drc2_hold.write(drc_param->hold)) return false;
+    if (!drc3_attack.write(drc_param->attack)) return false;
+    if (!drc3_decay.write(drc_param->decay)) return false;
+
+    drc_lpf_coeffs = (drc_param->lpf_coeffs != NULL) ? drc_param->lpf_coeffs : drc_lpf_coeffs_default;
+    drc_hpf_coeffs = (drc_param->hpf_coeffs != NULL) ? drc_param->hpf_coeffs : drc_hpf_coeffs_default;
+  }
+  else {
+    // use recommended settings, Ch. 6.3.10.4.2...5
+    if (!drc1_thres.write(TLV320_DRC_THRESHOLD_MINUS_24DB)) return false;
+    if (!drc1_hyst.write(TLV320_DRC_HYST_3DB)) return false;
+    if (!drc2_hold.write(TLV320_DRC_HOLD_TIME_DISABLED)) return false;
+    if (!drc3_attack.write(TLV320_DRC_ATTACK_RATE_0_00195312DB)) return false;
+    if (!drc3_decay.write(TLV320_DRC_DECAY_RATE_0_000244140DB)) return false;
+
+    drc_lpf_coeffs = drc_lpf_coeffs_default;
+    drc_hpf_coeffs = drc_hpf_coeffs_default;
+  }
+
+  if (!setPage(8)) return false;
+  adaptive_mode = cram_adaptive.read();
+
+  if (!setPage(0)) return false;
+  left_dac_on_orig = left_dac_on = left_power.read();
+  right_dac_on_orig = right_dac_on = right_power.read();
+
+  if (!adaptive_mode) {
+    // ramp down procedure as recommended in Ch. 6.3.10.9, figure 6-18
+    if (left_dac_on && left_channel) {
+      left_mute_orig = left_mute_bit.read();
+      left_vol_orig = getChannelVolume(false);
+      if (!setChannelVolume(false, -63.5)) return false;
+      while (!lpga_bit.read()) {};
+      if (!left_mute_bit.write(true)) return false;
+      delay(20);
+      if (!left_power.write(false)) return false;  // power down left DAC to get access
+    }
+    if (right_dac_on && right_channel) {
+      right_mute_orig = right_mute_bit.read();
+      right_vol_orig = getChannelVolume(true);
+      if (!setChannelVolume(true, -63.5)) return false;
+      while (!rpga_bit.read()) {};
+      if (!right_mute_bit.write(true)) return false;
+      delay(20);
+      if (!right_power.write(false)) return false; // power down right DAC to get access
+    }
+  }
 
   // setting DRC LPF/HPF coefficients
-  if (!setPage(9)) return false;
-  if (drc_hpf_coeffs && drc_hpf_coeffs_length) {
-    Adafruit_BusIO_Register drc_hpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
-    if (!(drc_hpf.write(drc_hpf_coeffs, drc_hpf_coeffs_length))) return false;
+  if (!setPage(9)) return false;    // write to C-RAM Buffer A  (A or B in adaptive mode)
+
+  Adafruit_BusIO_Register drc_lpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_LPF_N0H);
+  if (!(drc_lpf.write(drc_lpf_coeffs, 6))) return false;
+
+  Adafruit_BusIO_Register drc_hpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
+  if (!(drc_hpf.write(drc_hpf_coeffs, 6))) return false;
+
+  if (adaptive_mode) {
+    if (!setPage(8)) return false;
+
+    // triggering a switch between buffer A and B
+    if (!cram_buffer_switch.write(true)) return false;
+
+    // Note: if the I2S audio bus is not active (externally or internally) or both(!) DACs are
+    // powered down then switching will not happen and we are stuck. The timer is our bailout.
+    uint32_t start = millis();
+
+    while (true) {
+      if (!cram_buffer_switch.read()) break;
+      if ((millis() - start) > 20) return false;
+    };
   }
-  if (drc_lpf_coeffs && drc_lpf_coeffs_length) {
-    Adafruit_BusIO_Register drc_lpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_LPF_N0H);
-    if (!(drc_lpf.write(drc_lpf_coeffs, drc_lpf_coeffs_length))) return false;
+
+  if (!setPage(13)) return false;    // write to C-RAM Buffer B  (A or B in adaptive mode)
+
+  drc_lpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_LPF_N0H);
+  if (!(drc_lpf.write(drc_lpf_coeffs, 6))) return false;
+
+  drc_hpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
+  if (!(drc_hpf.write(drc_hpf_coeffs, 6))) return false;
+
+  if (!adaptive_mode) {
+    // ramp up procedure as recommended in Ch. 6.3.10.9, figure 6-18
+    if (!setPage(0)) return false;
+
+    if (left_dac_on_orig && left_channel) {
+      if (!left_power.write(true)) return false;  // power up left DAC
+      delay(20);
+      if (!left_mute_bit.write(left_mute_orig)) return false;
+      if (!setChannelVolume(false, left_vol_orig)) return false;
+      while (!lpga_bit.read()) {};
+    }
+
+    if (right_dac_on_orig && right_channel) {
+      if (!right_power.write(true)) return false; // power up right DAC
+      delay(20);
+      if (!right_mute_bit.write(right_mute_orig)) return false;
+      if (!setChannelVolume(true, right_vol_orig)) return false;
+      while (!rpga_bit.read()) {};
+    }
   }
 
   return true;
@@ -683,7 +792,7 @@ bool TLV320DAC3101::refactorB(double *b0, double *b1, double *b2)
 
 #ifdef _DEBUG_
 //
-// Only for debugging purposes! Print various DAC register values.
+// Only for debugging purposes. Print various DAC register values.
 //
 __attribute__((optimize("O0")))
 void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
@@ -914,7 +1023,15 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
   if (select & Px_DRC) {
     if (!setPage(9)) return;  // DRC C-RAM Buffer A
 
-    Adafruit_BusIO_Register reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
+    Adafruit_BusIO_Register reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_LPF_N0H);
+    if (reg.read(buf, 6)) {
+      Serial.printf("P9:DRC_LPF N0H/L(0x%02x/0x%02x)=0x%02x/0x%02x, N1H/L(0x%02x/0x%02x)=0x%02x/0x%02x, "
+                    "D1H/L(0x%02x/0x%02x)=0x%02x/0x%02x\n",
+                    TLV320DAC3100_REG_DRC_LPF_N0H, TLV320DAC3100_REG_DRC_LPF_N0L, buf[0], buf[1],
+                    TLV320DAC3100_REG_DRC_LPF_N1H, TLV320DAC3100_REG_DRC_LPF_N1L, buf[2], buf[3],
+                    TLV320DAC3100_REG_DRC_LPF_D1H, TLV320DAC3100_REG_DRC_LPF_D1L, buf[4], buf[5]);
+    }
+    reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
     if (reg.read(buf, 6)) {
       Serial.printf("P9:DRC_HPF N0H/L(0x%02x/0x%02x)=0x%02x/0x%02x, N1H/L(0x%02x/0x%02x)=0x%02x/0x%02x, "
                     "D1H/L(0x%02x/0x%02x)=0x%02x/0x%02x\n",
@@ -923,16 +1040,17 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
                     TLV320DAC3100_REG_DRC_HPF_D1H, TLV320DAC3100_REG_DRC_HPF_D1L, buf[4], buf[5]);
     }
 
+
+    if (!setPage(13)) return;  // DRC C-RAM Buffer B
+
     reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_LPF_N0H);
     if (reg.read(buf, 6)) {
-      Serial.printf("P9:DRC_LPF N0H/L(0x%02x/0x%02x)=0x%02x/0x%02x, N1H/L(0x%02x/0x%02x)=0x%02x/0x%02x, "
+      Serial.printf("P13:DRC_LPF N0H/L(0x%02x/0x%02x)=0x%02x/0x%02x, N1H/L(0x%02x/0x%02x)=0x%02x/0x%02x, "
                     "D1H/L(0x%02x/0x%02x)=0x%02x/0x%02x\n",
                     TLV320DAC3100_REG_DRC_LPF_N0H, TLV320DAC3100_REG_DRC_LPF_N0L, buf[0], buf[1],
                     TLV320DAC3100_REG_DRC_LPF_N1H, TLV320DAC3100_REG_DRC_LPF_N1L, buf[2], buf[3],
                     TLV320DAC3100_REG_DRC_LPF_D1H, TLV320DAC3100_REG_DRC_LPF_D1L, buf[4], buf[5]);
     }
-
-    if (!setPage(13)) return;  // DRC C-RAM Buffer B
 
     reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
     if (reg.read(buf, 6)) {
@@ -943,14 +1061,6 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
                     TLV320DAC3100_REG_DRC_HPF_D1H, TLV320DAC3100_REG_DRC_HPF_D1L, buf[4], buf[5]);
     }
 
-    reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_LPF_N0H);
-    if (reg.read(buf, 6)) {
-      Serial.printf("P13:DRC_LPF N0H/L(0x%02x/0x%02x)=0x%02x/0x%02x, N1H/L(0x%02x/0x%02x)=0x%02x/0x%02x, "
-                    "D1H/L(0x%02x/0x%02x)=0x%02x/0x%02x\n",
-                    TLV320DAC3100_REG_DRC_LPF_N0H, TLV320DAC3100_REG_DRC_LPF_N0L, buf[0], buf[1],
-                    TLV320DAC3100_REG_DRC_LPF_N1H, TLV320DAC3100_REG_DRC_LPF_N1L, buf[2], buf[3],
-                    TLV320DAC3100_REG_DRC_LPF_D1H, TLV320DAC3100_REG_DRC_LPF_D1L, buf[4], buf[5]);
-    }
   }
 
   if (select & Px_IIR) {

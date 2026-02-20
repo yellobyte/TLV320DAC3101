@@ -1,33 +1,30 @@
 /*
   Audio processing with the Texas Instruments TLV320DAC3101 Audio Stereo DAC.
 
-  The lib is build upon the Adafruit TLV320 I2S library and extends it with routines 
-  for filtering (high pass, low pass, notch, EQ etc. using IIR and/or BiQuad filters), 
-  dynamic range control DRC, adaptive filtering mode and stereo speaker output 
+  The lib is build upon the Adafruit TLV320 I2S library and extends it with routines
+  for filtering (low/high pass, notch, EQ & shelf using IIR and/or BiQuad filters),
+  dynamic range compression DRC, adaptive filtering mode and stereo speaker output
   for the TLV320DAC3101.
-
-  It also provides a print function which should make debugging code for the rather 
-  complex TLV320DAC3101 chip a bit easier.
 
   Copyright (c) 2025 Thomas Jentzsch
 
   Permission is hereby granted, free of charge, to any person
-  obtaining a copy of this software and associated documentation 
-  files (the "Software"), to deal in the Software without restriction, 
-  including without limitation the rights to use, copy, modify, merge, 
-  publish, distribute, sublicense, and/or sell copies of the Software, 
-  and to permit persons to whom the Software is furnished to do so, 
+  obtaining a copy of this software and associated documentation
+  files (the "Software"), to deal in the Software without restriction,
+  including without limitation the rights to use, copy, modify, merge,
+  publish, distribute, sublicense, and/or sell copies of the Software,
+  and to permit persons to whom the Software is furnished to do so,
   subject to the following conditions:
 
-  The above copyright notice and this permission notice shall be 
+  The above copyright notice and this permission notice shall be
   included in all copies or substantial portions of the Software.
 
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
-  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR 
-  ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF 
-  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+  MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR
+  ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+  CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
@@ -36,10 +33,10 @@
 
 #include <Adafruit_TLV320DAC3100.h>
 
-// Page 0 
-#define TLV320DAC3100_REG_DRC_CONTROL_1 0x44 // DRC Control 1 Register 
-#define TLV320DAC3100_REG_DRC_CONTROL_2 0x45 // DRC Control 2 Register 
-#define TLV320DAC3100_REG_DRC_CONTROL_3 0x46 // DRC Control 3 Register 
+// Page 0
+#define TLV320DAC3100_REG_DRC_CONTROL_1 0x44 // DRC Control 1 Register
+#define TLV320DAC3100_REG_DRC_CONTROL_2 0x45 // DRC Control 2 Register
+#define TLV320DAC3100_REG_DRC_CONTROL_3 0x46 // DRC Control 3 Register
 
 // Pages 8/12 DAC Coefficient-RAM A/B
 #define TLV320DAC3100_REG_DAC_CRAM_CTRL 0x01 // DAC C-RAM Control Register
@@ -176,12 +173,12 @@ typedef enum {
 
 typedef enum {
   TLV320_DRC_HOLD_TIME_DISABLED       = 0b0000,  // disabled
-  TLV320_DRC_HOLD_TIME_32_SAMPLES     = 0b0001,  // 
-  TLV320_DRC_HOLD_TIME_64_SAMPLES     = 0b0010,  // 
-  TLV320_DRC_HOLD_TIME_128_SAMPLES    = 0b0011,  // 
-  TLV320_DRC_HOLD_TIME_256_SAMPLES    = 0b0100,  // 
-  TLV320_DRC_HOLD_TIME_512_SAMPLES    = 0b0101,  // 
-  TLV320_DRC_HOLD_TIME_1024_SAMPLES   = 0b0110,  // 
+  TLV320_DRC_HOLD_TIME_32_SAMPLES     = 0b0001,  //
+  TLV320_DRC_HOLD_TIME_64_SAMPLES     = 0b0010,  //
+  TLV320_DRC_HOLD_TIME_128_SAMPLES    = 0b0011,  //
+  TLV320_DRC_HOLD_TIME_256_SAMPLES    = 0b0100,  //
+  TLV320_DRC_HOLD_TIME_512_SAMPLES    = 0b0101,  //
+  TLV320_DRC_HOLD_TIME_1024_SAMPLES   = 0b0110,  //
   TLV320_DRC_HOLD_TIME_2048_SAMPLES   = 0b0111,  //
   TLV320_DRC_HOLD_TIME_4096_SAMPLES   = 0b1000,  //
   TLV320_DRC_HOLD_TIME_8192_SAMPLES   = 0b1001,  //
@@ -251,37 +248,33 @@ typedef enum {
   TLV320_FILTER_TYPE_TREBLE_SHELF   // treble shelf filter
 } tlv320_filter_type_t;
 
-typedef struct 
-{
+typedef struct {
   float fc    { 0 };                   // -3dB corner frequency (LPF, HPF) or center frequency (notch, EQ, shelf)
   float bw    { 0.0};                  // Hz, bandwidth (only notch and EQ)
   float gain  { 0.0 };                 // dB, filter gain (default is 0)
   float Q     { 0.0 };                 // filter quality factor (can be given instead of bandwidth)
   //float S     { 1.0 };                 // shelfing factor for bass/treble shelf filter
   uint8_t N0H { 0x7F }, N0L { 0xFF },  // filter coefficients, default is linear filter
-          N1H { 0 },    N1L { 0 }, 
+          N1H { 0 },    N1L { 0 },
           N2H { 0 },    N2L { 0 },
-          D1H { 0 },    D1L { 0 }, 
+          D1H { 0 },    D1L { 0 },
           D2H { 0 },    D2L { 0 };
 } tlv320_filter_param_t;
 
-typedef struct 
-{
-  tlv320_drc_threshold_t threshold                   // default as recommended in Ch. 6.3.10.4.1 
-          { TLV320_DRC_THRESHOLD_MINUS_24DB };  
+typedef struct {
+  tlv320_drc_threshold_t threshold
+          { TLV320_DRC_THRESHOLD_MINUS_24DB };
   tlv320_drc_hyst_t hyst                             // default as recommended in Ch. 6.3.10.4.2
-          { TLV320_DRC_HYST_3DB }; 
+          { TLV320_DRC_HYST_3DB };
   tlv320_drc_hold_time_t hold                        // default as recommended in Ch. 6.3.10.4.3
           { TLV320_DRC_HOLD_TIME_DISABLED };
   tlv320_drc_attack_rate_t attack                    // default as recommended in Ch. 6.3.10.4.4
           { TLV320_DRC_ATTACK_RATE_0_00195312DB };
   tlv320_drc_decay_rate_t decay                      // default as recommended in Ch. 6.3.10.4.5
           { TLV320_DRC_DECAY_RATE_0_000244140DB };
-  uint8_t *hpf_buf       { NULL };                   // pointer to DRC HPF coefficients
-  uint8_t hpf_buf_length { 0 };
-  uint8_t *lpf_buf       { NULL };                   // pointer to DRC LPF coefficients
-  uint8_t lpf_buf_length { 0 };
-} tlv320_drc_cfg_t;
+  uint8_t *lpf_coeffs { NULL };                      // pointers to non standard DRC LPF/HPF
+  uint8_t *hpf_coeffs { NULL };                      // coefficients can be given
+} tlv320_drc_param_t;
 
 class TLV320DAC3101 : public Adafruit_TLV320DAC3100 {
 public:
@@ -290,20 +283,21 @@ public:
   bool getRegisterValue(uint8_t page, uint8_t registr, uint16_t *value);
   bool enableSpeaker(bool en);
   bool configureSPK_PGA(tlv320_spk_gain_t gain, bool unmute);
-  
-  bool setSPKVolume(bool route_enabled, uint8_t gain);
-  bool setDRC(bool enabled, tlv320_drc_cfg_t *drc_cfg);
+
+  bool setSPKVolume(bool route_enable, uint8_t gain);
+  bool setDRC(bool enable, bool left_channel, bool right_channel,
+              tlv320_drc_param_t *drc_param);
   bool powerOnDAC(bool left_dac_on, bool right_dac_on);
-  bool calcDACFilterCoefficients(float sample_frequency, tlv320_filter_type_t type, 
+  bool calcDACFilterCoefficients(float sample_frequency, tlv320_filter_type_t type,
                                  tlv320_filter_t filter, tlv320_filter_param_t *param);
-  bool setDACFilter(bool enabled, bool left_channel, bool right_channel, 
+  bool setDACFilter(bool enable, bool left_channel, bool right_channel,
                     tlv320_filter_t filter, tlv320_filter_param_t *param);
-  bool setAdaptiveMode(bool enabled);
+  bool setAdaptiveMode(bool enable);
   bool getAdaptiveMode();
 
 #ifdef _DEBUG_
     void printRegisterSettings(const char *s = "", uint16_t select = (uint16_t)0xFFFF);
-#endif    
+#endif
 
 private:
   bool setPage(uint8_t page);
