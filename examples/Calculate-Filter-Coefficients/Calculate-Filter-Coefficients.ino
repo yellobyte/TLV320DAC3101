@@ -1,13 +1,13 @@
 /*
-  The example shows how to calculate TLV320DAC3101 IIR & BiQuad filter coefficients for various 
-  sample frequencies, filter types and filter parameters.
+  The example demonstrates how to calculate TLV320DAC3101 IIR & BiQuad filter coefficients 
+  for various sample frequencies, filter types and filter parameters.
 
   The following libraries are needed:
    - Adafruit_TLV320_I2S
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-02-18, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-02-20, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>

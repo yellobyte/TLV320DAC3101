@@ -1,17 +1,17 @@
 /*
-  BiQuad (2nd order) EQ Filter
+  BiQuad Bass Shelf Filter (4th order)
 
-  An ESP32 background thread is feeding the TLV320 with a sine tone sweep 100Hz...2500Hz.
-  The TLV320DAC3101 Stereo Audio DAC has a BiQuad EQ filter with fc=1.5kHz, bandwidth
-  bw=200Hz and gain=+12dB activated. Therefore all frequencies near 1.5kHz will get a
-  small boost. The audio signal is output on both the speaker and headphone socket.
+  An ESP32 background thread is feeding the TLV320 with a sine tone sweep 50Hz...4000Hz.
+  The TLV320DAC3101 Stereo Audio DAC has two cascaded BiQuad Bass Shelf filter blocks with
+  each fc=1.5kHz and gain=+10dB activated. Therefore the frequency spectrum below 1.5kHz will
+  get a flat 20dB boost. The audio signal is output on both the speaker and headphone socket.
 
   Processing block PRB_P1 (default) contains 3 BiQuad filter blocks (A, B, C). We configure
-  and use only one of them.
+  and use two of them.
 
   The example accepts the following serial input:
-   - d...disables the filter,
-   - e...enables the filter,
+   - d...disables filtering,
+   - e...enables filtering,
    - a...toggles adaptive mode
 
   The following additional libraries are needed:
@@ -33,15 +33,16 @@ i2s_slot_mode_t      slot  = I2S_SLOT_MODE_STEREO;      // 2 slots (stereo)
 
 // audio definitions
 #define SAMPLERATE_HZ 44100        // audio sample rate (e.g. 32000, 44100, 48000)
-#define FREQU_MAX     2500         // highest generated frequency
-#define FREQU_MIN     100          // lowest generated frequency
+#define FREQU_MAX     4000         // highest generated frequency
+#define FREQU_MIN     50           // lowest generated frequency
 #define FREQU_DELTA   1            // Hz, frequency step
-#define INTERVAL      2            // ms, delay before changing to next frequency
+#define INTERVAL      1            // ms, delay before changing to next frequency
 
-// defines the parameters of the EQ filter
-#define FREQU_C       1500         // Hz, center frequency of EQ filter
-#define FREQU_BW      200          // Hz, -3dB bandwidth
-#define GAIN          12.0         // filter gain
+// defines the parameters of each BiQuad bass shelf filter block
+#define FREQU_C       1500         // Hz, center frequency fc of shelf filter
+#define GAIN          10.0         // constant filter block gain at frequencies below fc,
+                                   // Note: setting the overall gain too high will render
+                                   // the filter unstable!
 
 float amplitude = ((1<<14)-1);     // amplitude of generated waveform
 uint32_t frequency = FREQU_MIN,    // start frequency of generated waveform
@@ -60,8 +61,8 @@ tlv320_filter_param_t filter;        // will keep the filter parameter
 void backgroundTask(void *parameter) {
   uint16_t pos = 0, delta;
   while (true) {
-    // giving some visual feedback about actual frequency
-    if (!(frequency % 50)) Serial.printf("frequency=%.0luHz\n", frequency);
+    // give some visual feedback about actual frequency
+    if (!(frequency % 100)) Serial.printf("frequency=%.0luHz\n", frequency);
 
     // generate sine tone sweep
     delta = (uint16_t)(frequency * (float)WAV_SIZE / (float)SAMPLERATE_HZ);
@@ -92,7 +93,7 @@ void halt(const char *message) {
 void setup() {
   Serial.begin(115200);
 
-  Serial.println("\nrunning example \"BiQuad EQ Filter\":");
+  Serial.println("\nrunning example \"Bass Shelf Filter (4th order)\":");
 
   // generate a sine wave signal with defined amplitude in RAM buffer
   for (int i = 0; i < WAV_SIZE; ++i) {
@@ -137,17 +138,16 @@ void setup() {
     halt("Failed to power up PLL!");
   }
 
-  // setting parameters for EQ filter
-  filter.fc = (float)FREQU_C;                        // center frequency
-  filter.bw = (float)FREQU_BW;                       // -3dB bandwidth
-  filter.gain = (float)GAIN;                         // EQ filter gain
+  // setting parameters for bass shelf filter
+  filter.fc = (float)FREQU_C;                // center frequency
+  filter.gain = (float)GAIN;                 // filter gain below fc per BiQuad block
   // instead of using the function below one could set filter coefficients manually
   // filter.N0H = 0x3F,
   // filter.N0L = 0xF2,
   // ...
 
   // calculate coefficients for a Biquad filter block
-  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_EQ,
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_BASS_SHELF,
                                      TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
   }
@@ -158,6 +158,14 @@ void setup() {
                         TLV320_FILTER_BIQUAD_A,  // using BiQuadA filter block
                         &filter)) {              // pointer to filter settings
     halt("Failed to set BiQuadA filter block!");
+  }
+
+  if (!dac.setDACFilter(true,                    // enable filtering
+                        true,                    // on left channel
+                        true,                    // and on right channel
+                        TLV320_FILTER_BIQUAD_B,  // using BiQuadB filter block
+                        &filter)) {              // pointer to filter settings
+    halt("Failed to set BiQuadB filter block!");
   }
 
   // Configure DAC path - now power up both left and right DACs
@@ -223,15 +231,17 @@ void loop() {
   // check for serial input and perform the requested action
   if (Serial.read(buf, sizeof(buf))) {
     if (*buf == 'e') {                        // enable filtering
-      Serial.println("---> enable EQ filter");
-      if (!dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_A, &filter)) {
-        halt("Failed to enable BiQuadA filter!");
+      Serial.println("---> enable bass shelf filter");
+      if (!dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_A, &filter) ||
+          !dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_B, &filter)) {
+        halt("Failed to enable filtering!");
       }
     }
     else if (*buf == 'd') {                   // disable filtering
-      Serial.println("---> disable EQ filter");
-      if (!dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_A, NULL)) {
-        halt("Failed to disable BiQuadA filter!");
+      Serial.println("---> disable bass shelf filter");
+      if (!dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_A, NULL) ||
+          !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_B, NULL)) {
+        halt("Failed to disable filteringded!");
       }
     }
     else if (*buf == 'a') {                   // toggle adaptive mode

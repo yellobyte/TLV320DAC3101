@@ -2,7 +2,7 @@
   Beep Generator
 
   This example generates short beeps in random intervals with the TLV320DAC3101 integrated
-  beep generator while a sound sample from ESP32 flash is playing.
+  beep generator while a sound sample is playing from ESP32 flash memory.
 
   The TLV320 initialization sequence is based on Adafruit_TLV320_I2S lib examples and
   has been modified to fit the TLV320DAC3101 Stereo Audio DAC.
@@ -12,7 +12,7 @@
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-02-19, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-02-20, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>

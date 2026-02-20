@@ -11,17 +11,17 @@
   Processing block PRB_P1 (default) contains 3 BiQuad filter blocks (A, B, C) per channel.
   We configure and use all three of them.
 
-  When the serial monitor has the input focus you can enter some keys:
-   - d...disable filtering,
-   - e...enable filtering,
-   - a...toggle adaptive mode
+  The example accepts the following serial input:
+   - d...disables filtering,
+   - e...enables filtering,
+   - a...toggles adaptive mode
 
   The following additional libraries are needed:
    - Adafruit_TLV320_I2S
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-02-19, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-02-20, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>

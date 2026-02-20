@@ -8,7 +8,7 @@
 
   We use the IIR filter section of processing block PRB_P3.
 
-  When the serial monitor has the input focus you can enter some letters:
+  The example accepts the following serial input:
    - d...disables the filter,
    - e...enables the filter,
    - a...toggles adaptive mode

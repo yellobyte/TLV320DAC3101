@@ -10,11 +10,11 @@
   The TLV320 initialization sequence is based on Adafruit_TLV320_I2S lib examples and
   has been modified to fit the TLV320DAC3101 Stereo Audio DAC.
 
-  When the serial monitor has the input focus you can enter some keys:
-   - d...disable DRC,
-   - e...enable DRC,
-   - +/-...increase/decrease volume
-   - a...toggle adaptive mode
+  The example accepts the following serial input:
+   - d...disables DRC,
+   - e...enables DRC,
+   - +/-...increases/decreases volume
+   - a...toggles adaptive mode
 
   The following libraries are needed:
    - SD

@@ -9,7 +9,7 @@
   Processing block PRB_P1 (default) contains 3 BiQuad filter blocks (A, B, C). We configure
   and use only BiQuadA.
 
-  When the serial monitor has the input focus you can enter some keys:
+  The example accepts the following serial input:
    - d...disables the filter,
    - e...enables the filter,
    - a...toggles adaptive mode
