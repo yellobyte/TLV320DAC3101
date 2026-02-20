@@ -8,7 +8,7 @@
   SD_CS must be closed [default].
 
   The TLV320 initialization sequence is based on Adafruit_TLV320_I2S lib examples and
-  has been modified to fit the TLV320DAC3101 Stereo Audio DAC on the YB-ESP32-S3-DAC board.
+  has been modified to fit the TLV320DAC3101 Stereo Audio DAC.
 
   When the serial monitor has the input focus you can enter some keys:
    - d...disable DRC,
