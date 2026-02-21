@@ -200,7 +200,7 @@ void setup()
   // setting parameters for the BiQuad filter block
   filter.fc = 1500.0;                            // Hz, EQ center frequency
   filter.bw = 200.0;                             // Hz, EQ filter bandwidth
-  filter.gain = 12.0;                            // dB, EQ filter gain
+  filter.gain = 12.0;                            // dB, EQ filter peak gain
 
   // calculate BiQuad coefficients
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_EQ,
