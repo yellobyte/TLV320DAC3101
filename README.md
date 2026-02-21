@@ -32,14 +32,18 @@ void setup()
     halt("Failed to configure Processing Block!");
   }
 
-  // setting parameters for an IIR low pass filter
+  // setting parameter for low pass filter
   filter.fc = 1000;                           // Hz, -3dB corner frequency
 
-  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_LOW_PASS,
-                                     TLV320_FILTER_IIR, &filter)) {
+  // calculate filter coefficients (TI calls them N0, N1 & D1) for an IIR (1st order) filter
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ,                // audio sample rate
+                                     TLV320_FILTER_TYPE_LOW_PASS,  // filter type
+                                     TLV320_FILTER_IIR,            // 1st order filter
+                                     &filter)) {                   // keeps filter setting
     halt("Failed to calculate IIR filter coefficients!");
   }
 
+  // program the calculated filter coefficients into the IIR signal processing block
   if (!dac.setDACFilter(true,                 // enable filtering
                         true,                 // on left channel
                         true,                 // and on right channel
@@ -53,7 +57,7 @@ void setup()
 
 ### IIR (1st order) High Pass Filter:
 
-The TLV320DAC3101 has an IIR (1st order) high pass filter activated on both audio channels (left & right) and therefore frequencies below a set corner frequency get slightly attenuated. User defined filter coefficients get applied.
+The TLV320DAC3101 has an IIR (1st order) high pass filter activated on both audio channels (left & right) and therefore frequencies below a set corner frequency get slightly attenuated.
 
 ```c
 ...
@@ -72,7 +76,7 @@ void setup()
     halt("Failed to configure Processing Block!");
   }
 
-  // setting user defined IIR filter coefficients N0, N1, D1
+  // setting IIR signal processing block coefficients N0, N1, D1 manually
   filter.N0H = 0x77;
   filter.N0L = 0x78;
   filter.N1H = 0x88;
@@ -80,6 +84,7 @@ void setup()
   filter.D1H = 0x6E;
   filter.D1L = 0xF2;
 
+  // program the filter coefficients into the IIR signal processing block
   if (!dac.setDACFilter(true,                 // enable filtering
                         true,                 // on left channel
                         true,                 // and on right channel
@@ -111,12 +116,15 @@ void setup()
   filter.fc = 1500.0;                         // Hz, -3dB corner frequency
   filter.gain = 1.0;                          // dB, filter gain per block
 
-  // calculate BiQuad coefficients
-  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
-                                     TLV320_FILTER_BIQUAD, &filter)) {
+  // calculate filter coefficients (TI calls them N0, N1, N2, D1 & D2) for a BiQuad (2nd order) filter
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ,                 // audio sample rate
+                                     TLV320_FILTER_TYPE_HIGH_PASS,  // filter type
+                                     TLV320_FILTER_BIQUAD,          // 2nd order filter
+                                     &filter)) {                    // keeps filter settings
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
+  // program the calculated filter coefficients into the BiQuad signal processing blocks
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -315,7 +323,7 @@ void setup()
 void loop()
 {
   ...
-  dac.enableBeep(true);  // generate single beep tone
+  dac.enableBeep(true);  // generate single short beep tone of 1kHz
   ...
 }
 ```

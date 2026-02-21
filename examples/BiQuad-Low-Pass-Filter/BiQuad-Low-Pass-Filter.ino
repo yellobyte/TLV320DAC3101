@@ -34,9 +34,9 @@ i2s_data_bit_width_t width = I2S_DATA_BIT_WIDTH_16BIT;  // 16bit data/sample wid
 i2s_slot_mode_t      slot  = I2S_SLOT_MODE_STEREO;      // 2 slots (stereo)
 
 // audio definitions for sine tone generation
-#define SAMPLERATE_HZ 44100         // audio sample rate (e.g. 32000, 44100, 48000)
-#define FREQU_MAX     5000          // highest generated frequency
-#define FREQU_MIN     50            // lowest generated frequency
+#define SAMPLERATE_HZ 44100         // Hz, audio sample rate (e.g. 32000, 44100, 48000)
+#define FREQU_MAX     5000          // Hz, highest generated frequency
+#define FREQU_MIN     50            // Hz, lowest generated frequency
 #define FREQU_DELTA   1             // Hz, frequency step
 #define INTERVAL      2             // ms, delay before changing to next frequency
 #define AMPLITUDE     ((1<<14)-1)   // amplitude of generated waveform

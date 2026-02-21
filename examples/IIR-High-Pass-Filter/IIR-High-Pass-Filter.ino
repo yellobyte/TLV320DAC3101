@@ -1,16 +1,16 @@
 /*
-  IIR (1st order) Low Pass Filter
+  IIR (1st order) High Pass Filter
 
-  An ESP32 background thread is feeding the TLV320 with a sine tone sweep 50Hz...8kHz.
-  The TLV320DAC3101 Stereo Audio DAC has an IIR (1st order) low pass filter activated on
-  both audio channels (left & right) and therefore higher frequencies will get attenuated.
+  An ESP32 background thread is feeding the TLV320 with a sine tone sweep 50Hz...5kHz.
+  The TLV320DAC3101 Stereo Audio DAC has an IIR (1st order) high pass filter activated on
+  both audio channels (left & right) and therefore lower frequencies get attenuated.
   The audio signal is output on both the speaker and headphone sockets.
 
   We use the IIR filter section of processing block PRB_P3.
 
   The example accepts the following serial input:
-   - d...disables the filter,
-   - e...enables the filter,
+   - d...disables filtering,
+   - e...enables filtering,
    - a...toggles adaptive mode
 
   The following additional libraries are needed:
@@ -32,13 +32,13 @@ i2s_slot_mode_t      slot  = I2S_SLOT_MODE_STEREO;      // 2 slots (stereo)
 
 // audio definitions for sine tone generation
 #define SAMPLERATE_HZ 32000        // audio sample rate (e.g. 32000, 44100, 48000)
-#define FREQU_MAX     8000         // highest generated frequency
+#define FREQU_MAX     5000         // highest generated frequency
 #define FREQU_MIN     50           // lowest generated frequency
 #define FREQU_DELTA   1            // Hz, frequency step
 #define INTERVAL      2            // ms, delay before changing to next frequency
 
-// defines the -3dB corner frequency of the low pass filter
-#define FREQU_C       1000         // Hz
+// defines the -3dB corner frequency of the high pass filter
+#define FREQU_C       2500         // Hz
 
 float amplitude = ((1<<14)-1);     // amplitude of generated waveform
 int32_t frequency = FREQU_MIN,     // start frequency of generated waveform
@@ -47,7 +47,7 @@ int32_t frequency = FREQU_MIN,     // start frequency of generated waveform
 
 // for pre-calculation of sine waveform in memory
 #define WAV_SIZE      4096         // size/points of generated waveform
-int16_t waveform[WAV_SIZE] = {0};
+int16_t waveform[WAV_SIZE] = { 0 };
 
 I2SClass  i2s;
 TLV320DAC3101 dac;
@@ -89,7 +89,7 @@ void halt(const char *message) {
 void setup() {
   Serial.begin(115200);
 
-  Serial.println("\nrunning example \"IIR Low Pass Filter\":");
+  Serial.println("\nrunning example \"IIR (1st order) High Pass Filter\":");
 
   // generate a sine wave signal with defined amplitude in RAM buffer
   for (int i = 0; i < WAV_SIZE; ++i) {
@@ -120,17 +120,17 @@ void setup() {
     halt("Failed to configure codec clocks!");
   }
 
-  if (!dac.setPLLValues(1, 2, 48, 0)) {     // Configure PLL dividers P, R, J and D
+  if (!dac.setPLLValues(1, 2, 48, 0)) {      // Configure PLL dividers P, R, J and D
     halt("Failed to configure PLL values!");
   }
 
-  if (!dac.setNDAC(true, 6) ||              // Configure DAC dividers NDAC, MDAC and DOSR
+  if (!dac.setNDAC(true, 6) ||               // Configure DAC dividers NDAC, MDAC and DOSR
       !dac.setMDAC(true, 4) ||
       !dac.setDOSR(128)) {
     Serial.println("Failed to configure DAC dividers!");
   }
 
-  if (!dac.powerPLL(true)) {                // Power up the PLL
+  if (!dac.powerPLL(true)) {                 // Power up the PLL
     halt("Failed to power up PLL!");
   }
 
@@ -140,19 +140,19 @@ void setup() {
   }
 
   // setting parameters for the IIR filter
-  filter.fc = (float)FREQU_C;               // -3dB corner frequency
+  filter.fc = (float)FREQU_C;                // -3dB corner frequency
   // instead of using the function below you could set filter coefficients manually
-  // .N0H = 0x34,
-  // .N0L = 0x0A,
+  // .N0H = 0x75,
+  // .N0L = 0x0F,
   // ...
 
-  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_LOW_PASS,
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
                                      TLV320_FILTER_IIR, &filter)) {
     halt("Failed to calculate IIR filter coefficients!");
   }
 
   if (!dac.setDACFilter(true,                    // enable filtering
-                        true,                    // on left channel 
+                        true,                    // on left channel
                         true,                    // and on right channel
                         TLV320_FILTER_IIR,       // using IIR filter block
                         &filter)) {              // pointer to filter settings
@@ -211,7 +211,7 @@ void setup() {
   Serial.println("I2S bus initialization done!");
 
   xTaskCreate(backgroundTask, "bgTask", 4096, NULL, 1, NULL);
-  delay(50);
+  delay(100);
 
   // The adaptive mode gets enabled with I2S bus already active and DACs powered up.
   dac.setAdaptiveMode(true);
@@ -223,13 +223,13 @@ void loop() {
   // check for serial input and perform the requested action
   if (Serial.read(buf, sizeof(buf))) {
     if (*buf == 'e') {                        // enable filtering
-      Serial.println("---> enable low pass filter");
+      Serial.println("---> enable high pass filter");
       if (!dac.setDACFilter(true, true, true, TLV320_FILTER_IIR, &filter)) {
         halt("Failed to enable IIR filter!");
       }
     }
     else if (*buf == 'd') {                   // disable filtering
-      Serial.println("---> disable low pass filter");
+      Serial.println("---> disable high pass filter");
       if (!dac.setDACFilter(false, true, true, TLV320_FILTER_IIR, &filter)) {
         halt("Failed to disable IIR filter!");
       }

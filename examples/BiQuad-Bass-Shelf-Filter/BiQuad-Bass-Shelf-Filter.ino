@@ -4,7 +4,7 @@
   An ESP32 background thread is feeding the TLV320 with a sine tone sweep 50Hz...4000Hz.
   The TLV320DAC3101 Stereo Audio DAC has two cascaded BiQuad Bass Shelf filter blocks with
   each fc=1.5kHz and gain=+10dB activated. Therefore the frequency spectrum below 1.5kHz will
-  get a flat 20dB boost. The audio signal is output on both the speaker and headphone socket.
+  get a constant 20dB boost. The audio signal is output on both the speaker and headphone sockets.
 
   Processing block PRB_P1 (default) contains 3 BiQuad filter blocks (A, B, C). We configure
   and use two of them.
@@ -19,7 +19,7 @@
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-02-20, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-02-21, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
@@ -32,17 +32,17 @@ i2s_data_bit_width_t width = I2S_DATA_BIT_WIDTH_16BIT;  // 16bit data/sample wid
 i2s_slot_mode_t      slot  = I2S_SLOT_MODE_STEREO;      // 2 slots (stereo)
 
 // audio definitions
-#define SAMPLERATE_HZ 44100        // audio sample rate (e.g. 32000, 44100, 48000)
-#define FREQU_MAX     4000         // highest generated frequency
-#define FREQU_MIN     50           // lowest generated frequency
+#define SAMPLERATE_HZ 44100        // Hz, audio sample rate (e.g. 32000, 44100, 48000)
+#define FREQU_MAX     4000         // Hz, highest generated frequency
+#define FREQU_MIN     50           // Hz, lowest generated frequency
 #define FREQU_DELTA   1            // Hz, frequency step
 #define INTERVAL      1            // ms, delay before changing to next frequency
 
 // defines the parameters of each BiQuad bass shelf filter block
-#define FREQU_C       1500         // Hz, center frequency fc of shelf filter
+#define FREQU_C       1500         // Hz, frequencies below 1.5kHz get boosted
 #define GAIN          10.0         // constant filter block gain at frequencies below fc,
-                                   // Note: setting the overall gain too high will render
-                                   // the filter unstable!
+                                   // Note: setting the overall gain too high will cause
+                                   // the filter to become unstable!
 
 float amplitude = ((1<<14)-1);     // amplitude of generated waveform
 uint32_t frequency = FREQU_MIN,    // start frequency of generated waveform
@@ -55,7 +55,7 @@ int16_t waveform[WAV_SIZE] = {0};
 
 I2SClass  i2s;
 TLV320DAC3101 dac;
-tlv320_filter_param_t filter;        // will keep the filter parameter
+tlv320_filter_param_t filter;      // keeps the filter parameter
 
 // Background task continuously feeding I2S bus with sine tone sweep
 void backgroundTask(void *parameter) {
@@ -139,32 +139,32 @@ void setup() {
   }
 
   // setting parameters for bass shelf filter
-  filter.fc = (float)FREQU_C;                // center frequency
-  filter.gain = (float)GAIN;                 // filter gain below fc per BiQuad block
+  filter.fc = (float)FREQU_C;
+  filter.gain = (float)GAIN;
   // instead of using the function below one could set filter coefficients manually
   // filter.N0H = 0x3F,
   // filter.N0L = 0xF2,
   // ...
 
-  // calculate coefficients for a Biquad filter block
+  // calculate coefficients for Biquad filter blocks
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_BASS_SHELF,
                                      TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
-  if (!dac.setDACFilter(true,                    // enable filtering
-                        true,                    // on left channel
-                        true,                    // and on right channel
-                        TLV320_FILTER_BIQUAD_A,  // using BiQuadA filter block
-                        &filter)) {              // pointer to filter settings
+  if (!dac.setDACFilter(true,                     // enable filtering
+                        true,                     // on left channel
+                        true,                     // and on right channel
+                        TLV320_FILTER_BIQUAD_A,   // using BiQuadA filter block
+                        &filter)) {               // pointer to filter settings
     halt("Failed to set BiQuadA filter block!");
   }
 
-  if (!dac.setDACFilter(true,                    // enable filtering
-                        true,                    // on left channel
-                        true,                    // and on right channel
-                        TLV320_FILTER_BIQUAD_B,  // using BiQuadB filter block
-                        &filter)) {              // pointer to filter settings
+  if (!dac.setDACFilter(true,                     // enable filtering
+                        true,                     // on left channel
+                        true,                     // and on right channel
+                        TLV320_FILTER_BIQUAD_B,   // using BiQuadB filter block
+                        &filter)) {               // pointer to filter settings
     halt("Failed to set BiQuadB filter block!");
   }
 

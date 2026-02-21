@@ -1,17 +1,18 @@
 /*
-  IIR (1st order) Low Pass Filter
+  BiQuad Treble Shelf Filter (4th order)
 
-  An ESP32 background thread is feeding the TLV320 with a sine tone sweep 50Hz...8kHz.
-  The TLV320DAC3101 Stereo Audio DAC has an IIR (1st order) low pass filter activated on
-  both audio channels (left & right) and therefore higher frequencies will get attenuated.
-  The audio signal is output on both the speaker and headphone sockets.
+  An ESP32 background thread is feeding the TLV320 with a sine tone sweep 50Hz...5000Hz.
+  The TLV320DAC3101 Stereo Audio DAC has two cascaded BiQuad Treble Shelf filter blocks with
+  fc=2kHz and gain=+10dB activated. Therefore the frequency spectrum above 2kHz gets a
+  constant +20dB boost. The audio signal is output on both the speaker and headphone sockets.
 
-  We use the IIR filter section of processing block PRB_P3.
+  Processing block PRB_P1 (default) contains 3 BiQuad filter blocks (A, B, C). We configure
+  and use two of them.
 
   The example accepts the following serial input:
    - d...disables the filter,
    - e...enables the filter,
-   - a...toggles adaptive mode
+   - a...toggles adaptive mode and
 
   The following additional libraries are needed:
    - Adafruit_TLV320_I2S
@@ -25,33 +26,36 @@
 #include <ESP_I2S.h>
 #include "TLV320DAC3101.h"
 
-// ESP32-S3 I2S bus settings
+// ESP32-S3 I2S settings
 i2s_mode_t           mode  = I2S_MODE_STD;              // Philips standard
 i2s_data_bit_width_t width = I2S_DATA_BIT_WIDTH_16BIT;  // 16bit data/sample width
 i2s_slot_mode_t      slot  = I2S_SLOT_MODE_STEREO;      // 2 slots (stereo)
 
-// audio definitions for sine tone generation
-#define SAMPLERATE_HZ 32000        // audio sample rate (e.g. 32000, 44100, 48000)
-#define FREQU_MAX     8000         // highest generated frequency
-#define FREQU_MIN     50           // lowest generated frequency
+// audio definitions
+#define SAMPLERATE_HZ 44100        // Hz, audio sample rate (e.g. 32000, 44100, 48000)
+#define FREQU_MAX     5000         // Hz, highest generated frequency
+#define FREQU_MIN     50           // Hz, lowest generated frequency
 #define FREQU_DELTA   1            // Hz, frequency step
-#define INTERVAL      2            // ms, delay before changing to next frequency
+#define INTERVAL      1            // ms, delay before changing to next frequency
 
-// defines the -3dB corner frequency of the low pass filter
-#define FREQU_C       1000         // Hz
+// defines the parameters of each BiQuad treble shelf filter block
+#define FREQU_C       2000         // Hz, frequencies above 2kHz get boosted
+#define GAIN          10.0         // dB, constant filter block gain at frequencies above fc,
+                                   // Note: setting the overall gain to high might cause
+                                   // the filter to become unstable!
 
 float amplitude = ((1<<14)-1);     // amplitude of generated waveform
-int32_t frequency = FREQU_MIN,     // start frequency of generated waveform
-        maxSamples = (int32_t)(SAMPLERATE_HZ / 1000.0 * INTERVAL),
-        fdelta = FREQU_DELTA;
+uint32_t frequency = FREQU_MIN,    // start frequency of generated waveform
+         maxSamples = (int32_t)(SAMPLERATE_HZ / 1000.0 * INTERVAL),
+         fdelta = FREQU_DELTA;
 
 // for pre-calculation of sine waveform in memory
 #define WAV_SIZE      4096         // size/points of generated waveform
-int16_t waveform[WAV_SIZE] = {0};
+int16_t waveform[WAV_SIZE] = { 0 };
 
 I2SClass  i2s;
 TLV320DAC3101 dac;
-tlv320_filter_param_t filter;        // keeps filter settings
+tlv320_filter_param_t filter;      // keeps the filter parameter
 
 // Background task continuously feeding I2S bus with sine tone sweep
 void backgroundTask(void *parameter) {
@@ -61,7 +65,7 @@ void backgroundTask(void *parameter) {
     if (!(frequency % 100)) Serial.printf("frequency=%.0luHz\n", frequency);
 
     // generate sine tone sweep
-    delta = (int16_t)(frequency * (float)WAV_SIZE / (float)SAMPLERATE_HZ);
+    delta = (uint16_t)(frequency * (float)WAV_SIZE / (float)SAMPLERATE_HZ);
     for (uint32_t i = 0; i < maxSamples; ++i) {
       pos = uint16_t(pos + delta) % (uint16_t)WAV_SIZE;
       int16_t sample = waveform[pos];
@@ -89,7 +93,7 @@ void halt(const char *message) {
 void setup() {
   Serial.begin(115200);
 
-  Serial.println("\nrunning example \"IIR Low Pass Filter\":");
+  Serial.println("\nrunning example \"Treble Shelf Filter\":");
 
   // generate a sine wave signal with defined amplitude in RAM buffer
   for (int i = 0; i < WAV_SIZE; ++i) {
@@ -120,43 +124,48 @@ void setup() {
     halt("Failed to configure codec clocks!");
   }
 
-  if (!dac.setPLLValues(1, 2, 48, 0)) {     // Configure PLL dividers P, R, J and D
+  if (!dac.setPLLValues(1, 2, 32, 0)) {      // Configure PLL dividers P, R, J and D
     halt("Failed to configure PLL values!");
   }
 
-  if (!dac.setNDAC(true, 6) ||              // Configure DAC dividers NDAC, MDAC and DOSR
+  if (!dac.setNDAC(true, 4) ||               // Configure DAC dividers NDAC, MDAC and DOSR
       !dac.setMDAC(true, 4) ||
       !dac.setDOSR(128)) {
     Serial.println("Failed to configure DAC dividers!");
   }
 
-  if (!dac.powerPLL(true)) {                // Power up the PLL
+  if (!dac.powerPLL(true)) {                 // Power up the PLL
     halt("Failed to power up PLL!");
   }
 
-  // PRB_P3 (RC10) contains IIR filtering option
-  if (!dac.setDACProcessingBlock(3)) {
-    halt("Failed to configure Processing Block!");
-  }
-
-  // setting parameters for the IIR filter
-  filter.fc = (float)FREQU_C;               // -3dB corner frequency
-  // instead of using the function below you could set filter coefficients manually
-  // .N0H = 0x34,
-  // .N0L = 0x0A,
+  // setting parameters for treble shelf filter
+  filter.fc = (float)FREQU_C;
+  filter.gain = (float)GAIN;
+  // instead of using the function below one could set filter coefficients manually
+  // filter.N0H = 0x3F,
+  // filter.N0L = 0xF2,
   // ...
 
-  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_LOW_PASS,
-                                     TLV320_FILTER_IIR, &filter)) {
-    halt("Failed to calculate IIR filter coefficients!");
+  // calculate coefficients for Biquad filter blocks
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_TREBLE_SHELF,
+                                     TLV320_FILTER_BIQUAD, &filter)) {
+    halt("Failed to calculate BiQuad filter coefficients!");
   }
 
   if (!dac.setDACFilter(true,                    // enable filtering
-                        true,                    // on left channel 
+                        true,                    // on left channel
                         true,                    // and on right channel
-                        TLV320_FILTER_IIR,       // using IIR filter block
+                        TLV320_FILTER_BIQUAD_A,  // using BiQuadA filter block
                         &filter)) {              // pointer to filter settings
-    halt("Failed to configure IIR filter!");
+    halt("Failed to set BiQuadA filter block!");
+  }
+
+  if (!dac.setDACFilter(true,                    // enable filtering
+                        true,                    // on left channel
+                        true,                    // and on right channel
+                        TLV320_FILTER_BIQUAD_B,  // using BiQuadB filter block
+                        &filter)) {              // pointer to filter settings
+    halt("Failed to set BiQuadB filter block!");
   }
 
   // Configure DAC path - now power up both left and right DACs
@@ -176,17 +185,16 @@ void setup() {
   }
 
   // DAC Volume Control
-  if (!dac.setDACVolumeControl(
-        false, false, TLV320_VOL_INDEPENDENT) ||   // Unmute both channels
-      !dac.setChannelVolume(false, 0) ||           // Left DAC +0dB
-      !dac.setChannelVolume(true, 0)) {            // Right DAC +0dB
+  if (!dac.setDACVolumeControl(false, false, TLV320_VOL_INDEPENDENT) ||  // Unmute both channels
+      !dac.setChannelVolume(false, -20) ||                               // Left DAC -20dB
+      !dac.setChannelVolume(true, -20)) {                                // Right DAC -20dB
     halt("Failed to configure DAC volumes!");
   }
 
   // Headphone & Speaker Setup
   if (!dac.configureHeadphoneDriver(
         true, true,                           // Power up both drivers
-        TLV320_HP_COMMON_1_50V,               // Default common mode
+        TLV320_HP_COMMON_1_65V,               // Default common mode
         false) ||                             // Don't power down on SCD
       !dac.configureHPL_PGA(0, true) ||       // Set HPL gain (0-9dB), unmute
       !dac.configureHPR_PGA(0, true) ||       // Set HPR gain (0-9dB), unmute
@@ -223,15 +231,17 @@ void loop() {
   // check for serial input and perform the requested action
   if (Serial.read(buf, sizeof(buf))) {
     if (*buf == 'e') {                        // enable filtering
-      Serial.println("---> enable low pass filter");
-      if (!dac.setDACFilter(true, true, true, TLV320_FILTER_IIR, &filter)) {
-        halt("Failed to enable IIR filter!");
+      Serial.println("---> enable treble shelf filter");
+      if (!dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_A, &filter) ||
+          !dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_B, &filter)) {
+        halt("Failed to enable filtering!");
       }
     }
     else if (*buf == 'd') {                   // disable filtering
-      Serial.println("---> disable low pass filter");
-      if (!dac.setDACFilter(false, true, true, TLV320_FILTER_IIR, &filter)) {
-        halt("Failed to disable IIR filter!");
+      Serial.println("---> disable treble shelf filter");
+      if (!dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_A, NULL) ||
+          !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_B, NULL)) {
+        halt("Failed to disable filteringded!");
       }
     }
     else if (*buf == 'a') {                   // toggle adaptive mode

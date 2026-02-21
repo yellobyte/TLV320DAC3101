@@ -19,7 +19,7 @@
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-02-20, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-02-21, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
@@ -32,9 +32,9 @@ i2s_data_bit_width_t width = I2S_DATA_BIT_WIDTH_16BIT;  // 16bit data/sample wid
 i2s_slot_mode_t      slot  = I2S_SLOT_MODE_STEREO;      // 2 slots (stereo)
 
 // audio definitions
-#define SAMPLERATE_HZ 44100        // audio sample rate (e.g. 32000, 44100, 48000)
-#define FREQU_MAX     2500         // highest generated frequency
-#define FREQU_MIN     100          // lowest generated frequency
+#define SAMPLERATE_HZ 44100        // Hz, audio sample rate (e.g. 32000, 44100, 48000)
+#define FREQU_MAX     2500         // Hz, highest generated frequency
+#define FREQU_MIN     100          // Hz, lowest generated frequency
 #define FREQU_DELTA   1            // Hz, frequency step
 #define INTERVAL      2            // ms, delay before changing to next frequency
 
@@ -54,7 +54,7 @@ int16_t waveform[WAV_SIZE] = {0};
 
 I2SClass  i2s;
 TLV320DAC3101 dac;
-tlv320_filter_param_t filter;        // will keep the filter parameter
+tlv320_filter_param_t filter;      // keeps the filter parameter
 
 // Background task continuously feeding I2S bus with sine tone sweep
 void backgroundTask(void *parameter) {
