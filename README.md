@@ -9,7 +9,7 @@ Integrating this library into your Arduino audio projects is easy. For detailed 
 
 To install the library into your **IDE** open the **Library Manager**, search for **TLV320DAC3101** and choose **install**, **Add to Project** or similar.
 
-## :information_source: Code samples for audio processing with the TLV320DAC3101 Stereo Audio DAC
+## :information_source: Code samples for audio processing with the TLV320DAC3101
 
 ### IIR (1st order) Low Pass Filter:
 
