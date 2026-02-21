@@ -191,7 +191,7 @@ void setup()
   ...
   // setting parameters for the BiQuad filter block
   filter.fc = 1500.0;                            // Hz, EQ center frequency
-  filter.bw = 200.0  ;                           // Hz, -3dB filter bandwidth
+  filter.bw = 200.0  ;                           // Hz, EQ filter bandwidth
   filter.gain = 12.0   ;                         // dB, EQ filter gain
 
   // calculate BiQuad coefficients
