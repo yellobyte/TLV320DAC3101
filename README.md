@@ -55,7 +55,7 @@ void setup()
 }
 ```
 
-### IIR (1st order) High Pass Filter:
+### Example 1: IIR (1st order) High Pass Filter
 
 The TLV320DAC3101 has an IIR (1st order) high pass filter activated on both audio channels (left & right) and therefore frequencies below a set corner frequency get slightly attenuated.
 
@@ -96,7 +96,7 @@ void setup()
 }
 ```
 
-### BiQuad (4th order) High Pass Filter:
+### Example 2: BiQuad (4th order) High Pass Filter
 
 The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Therefore frequencies below the set corner frequency get strongly attenuated.
 
@@ -144,7 +144,7 @@ void setup()
 }
 ```
 
-### BiQuad (2nd order) Notch Filter:
+### Example 3: BiQuad (2nd order) Notch Filter
 
 The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz will get attenuated.
 
@@ -181,7 +181,7 @@ void setup()
 }
 ```
 
-### BiQuad (2nd order) peaking EQ Filter:
+### Example 4: BiQuad (2nd order) peaking EQ Filter
 
 The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=200Hz and gain=+12dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
 
@@ -219,9 +219,9 @@ void setup()
 }
 ```
 
-### BiQuad (4th order) Bass Shelf Filter:
+### Example 5: BiQuad (4th order) Bass Shelf Filter
 
-The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=800Hz and gain=+8dB per block activated. Therefore the frequency spectrum below 800Hz will get a flat 16dB boost.
+The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=800Hz and gain=+8dB per block activated. Therefore the frequency spectrum below 800Hz will get a constant 16dB boost.
 
 ```c
 ...
@@ -266,7 +266,7 @@ void setup()
 }
 ```
 
-### Dynamic Range Compression (DRC):
+### Example 6: Dynamic Range Compression (DRC)
 
 An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
 
@@ -289,9 +289,9 @@ void setup()
 }
 ```
 
-### Using the integrated Beep Generator:
+### Example 7: Using the integrated Beep Generator
 
-The digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback.
+Only the digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback etc.
 
 ```c
 ...
@@ -304,7 +304,7 @@ TLV320DAC3101 dac;
 void setup()
 {
   ...
-  // Only processing block PRB_P25 (RC12) contains the Beep Generator
+  // Processing block PRB_P25 (RC12) contains a Beep Generator
   if (!dac.setDACProcessingBlock(25)) {
     halt("Failed to configure processing block!");
   }
