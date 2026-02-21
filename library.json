@@ -18,7 +18,7 @@
     "TLV320",
     "IIR",
     "BIQUAD",
-    "FILTERING",
+    "FILTER",
     "LOWPASS",
     "HIGHPASS",
     "NOTCH",
