@@ -262,7 +262,7 @@ typedef struct {
 } tlv320_filter_param_t;
 
 typedef struct {
-  tlv320_drc_threshold_t threshold
+  tlv320_drc_threshold_t threshold                   // default as recommended in Ch. 6.3.10.4.1
           { TLV320_DRC_THRESHOLD_MINUS_24DB };
   tlv320_drc_hyst_t hyst                             // default as recommended in Ch. 6.3.10.4.2
           { TLV320_DRC_HYST_3DB };
