@@ -213,7 +213,7 @@ void setup()
 
 ### BiQuad (4th order) Bass Shelf Filter:
 
-The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=1.5kHz and gain=+10dB per block activated. Therefore the frequency spectrum below 800Hz will get a flat 20dB boost.
+The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=1.5kHz and gain=+8dB per block activated. Therefore the frequency spectrum below 800Hz will get a flat 16dB boost.
 
 ```c
 ...
@@ -229,7 +229,7 @@ void setup()
   ...
   // setting parameters for BiQuad filter blocks
   filter.fc = 800.0;                             // Hz, -3dB center frequency
-  filter.gain = 10.0;                            // dB, filter gain below fc per BiQuad block
+  filter.gain = 8.0;                             // dB, filter gain below fc per BiQuad block
                                                  // Note: setting the overall gain too high might cause
                                                  // the filter to become unstable!
 
