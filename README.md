@@ -11,7 +11,7 @@ To install the library into your **IDE** open the **Library Manager**, search fo
 
 ## :information_source: Code samples for audio processing with the TLV320DAC3101
 
-### IIR (1st order) Low Pass Filter:
+### Example 1: IIR (1st order) Low Pass Filter
 
 The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the set corner frequency get slightly attenuated.
 
@@ -55,7 +55,7 @@ void setup()
 }
 ```
 
-### Example 1: IIR (1st order) High Pass Filter
+### Example 2: IIR (1st order) High Pass Filter
 
 The TLV320DAC3101 has an IIR (1st order) high pass filter activated on both audio channels (left & right) and therefore frequencies below a set corner frequency get slightly attenuated.
 
@@ -96,7 +96,7 @@ void setup()
 }
 ```
 
-### Example 2: BiQuad (4th order) High Pass Filter
+### Example 3: BiQuad (4th order) High Pass Filter
 
 The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Therefore frequencies below the set corner frequency get strongly attenuated.
 
@@ -144,7 +144,7 @@ void setup()
 }
 ```
 
-### Example 3: BiQuad (2nd order) Notch Filter
+### Example 4: BiQuad (2nd order) Notch Filter
 
 The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz will get attenuated.
 
@@ -181,7 +181,7 @@ void setup()
 }
 ```
 
-### Example 4: BiQuad (2nd order) peaking EQ Filter
+### Example 5: BiQuad (2nd order) peaking EQ Filter
 
 The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=200Hz and gain=+12dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
 
@@ -219,7 +219,7 @@ void setup()
 }
 ```
 
-### Example 5: BiQuad (4th order) Bass Shelf Filter
+### Example 6: BiQuad (4th order) Bass Shelf Filter
 
 The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=800Hz and gain=+8dB per block activated. Therefore the frequency spectrum below 800Hz will get a constant 16dB boost.
 
@@ -266,7 +266,7 @@ void setup()
 }
 ```
 
-### Example 6: Dynamic Range Compression (DRC)
+### Example 7: Dynamic Range Compression (DRC)
 
 An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
 
@@ -289,7 +289,7 @@ void setup()
 }
 ```
 
-### Example 7: Using the integrated Beep Generator
+### Example 8: Using the integrated Beep Generator
 
 Only the digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback etc.
 
