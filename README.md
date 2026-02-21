@@ -228,7 +228,7 @@ void setup()
 {
   ...
   // setting parameters for BiQuad filter blocks
-  filter.fc = 800.0;                             // Hz, -3dB center frequency
+  filter.fc = 800.0;                             // Hz, center frequency
   filter.gain = 8.0;                             // dB, filter gain below fc per BiQuad block
                                                  // Note: setting the overall gain too high might cause
                                                  // the filter to become unstable!
