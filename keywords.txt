@@ -27,7 +27,7 @@ configureSPK_PGA	KEYWORD2
 setSPKVolume	KEYWORD2
 setDRC	KEYWORD2
 powerOnDAC	KEYWORD2
-calculateDACFilterCoeffs	KEYWORD2
+calcDACFilterCoefficients	KEYWORD2
 setAdaptiveMode	KEYWORD2
 getAdaptiveMode	KEYWORD2
 setDACFilter		KEYWORD2
