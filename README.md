@@ -113,7 +113,7 @@ void setup()
 
   // calculate BiQuad coefficients
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
-                                    TLV320_FILTER_BIQUAD, &filter)) {
+                                     TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
