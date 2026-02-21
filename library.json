@@ -21,11 +21,12 @@
     "FILTERING",
     "LOWPASS",
     "HIGHPASS",
+    "NOTCH",
     "EQ",
     "SHELF",
     "DRC"
   ],
-  "description": "Arduino library for the Texas Instruments TLV320DAC3101 I2S Stereo Audio DAC. The lib is build upon the Adafruit TLV320 I2S library and extends it with functions for audio filtering (low/high  pass, notch, EQ & bass/treble shelf using 1st order IIR and/or 2nd order BiQuad), dynamic range control DRC, adaptive filtering mode and stereo speaker output for the TLV320DAC3101.",
+  "description": "Arduino library for the Texas Instruments TLV320DAC3101 I2S Stereo Audio DAC. The lib is build upon the Adafruit TLV320 I2S library and extends it with functions for audio filtering (low/high  pass, notch, EQ & bass/treble shelf using 1st order IIR and/or 2nd order BiQuad), dynamic range compression (DRC), adaptive filtering mode and stereo speaker output for the TLV320DAC3101.",
   "authors":
   [
     {
