@@ -170,6 +170,7 @@ void setup()
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
+  // program the calculated filter coefficients into the BiQuad signal processing block
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -208,6 +209,7 @@ void setup()
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
+  // program the calculated filter coefficients into the BiQuad signal processing block
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -247,6 +249,7 @@ void setup()
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
+  // program the calculated filter coefficients into the BiQuad signal processing blocks
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
