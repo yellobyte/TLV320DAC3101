@@ -1,4 +1,4 @@
-# TLV320DAC3101
+# TLV320DAC3101 Stereo Audio DAC
 Arduino library for the Texas Instruments TLV320DAC3101 I2S Stereo Audio DAC. The TLV320DAC3101 chip is a low-power, highly integrated, high-performance DAC with 25 selectable digital audio processing blocks (combination of 1 x IIR, 6 x BiQuad, DRC, interpolation filter, beep generator, all user programmable) and 24-bit stereo playback. It further features a Stereo Headphone or Lineout, a 1.3W 8Ω Class-D Speaker stereo output, I2S bus audio input supporting 8kHz to 192kHz sample rates, I2C bus for configuration & control and much more.
 
 The lib is build upon the Adafruit TLV320 I2S library and extends it with functions for audio filtering (low pass, high pass, notch, peaking EQ, bass shelf, treble shelf) using 1st order IIR and/or 2nd order BiQuad filter blocks (cascading is possible), dynamic range compression (DRC), adaptive filtering mode and **stereo speaker** output available on the TLV320DAC3101.
