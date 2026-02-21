@@ -3,8 +3,8 @@
 
   An ESP32 background thread is feeding the TLV320 with a sine tone sweep 1200Hz...1700Hz.
   The TLV320DAC3101 Stereo Audio DAC has a single BiQuad notch filters activated with a center
-  frequency of fc=1.5kHz and -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz
-  will get attenuated. The audio signal is output on both the speaker and headphone socket.
+  frequency of fc=1.5kHz and a -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz
+  get attenuated. The audio signal is output on both the speaker and headphone sockets.
 
   Processing block PRB_P1 (default) contains 3 BiQuad filter blocks (A, B, C). We configure
   and use only BiQuadA.
