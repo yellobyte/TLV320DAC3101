@@ -804,7 +804,7 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
   if (select & P0_I2S) {
     if (getRegisterValue(0, TLV320DAC3100_REG_CODEC_IF_CTRL1, &u8a)) {
       Serial.printf("P0:I2S(0x%02x)=0x%02x(D7:D6=%u,D5:D4=%u,D3=%u,D2=%u)\n",
-                      TLV320DAC3100_REG_CODEC_IF_CTRL1, u8a, (u8a>>6)&0x03, (u8a>>4)&0x03, (u8a>>3)&0x01, (u8a>>2)&0x01);
+                    TLV320DAC3100_REG_CODEC_IF_CTRL1, u8a, (u8a>>6)&0x03, (u8a>>4)&0x03, (u8a>>3)&0x01, (u8a>>2)&0x01);
     }
   }
 
