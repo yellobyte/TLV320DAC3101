@@ -47,7 +47,7 @@ void setup()
   }
 
   // setting parameter for low pass filter
-  filter.fc = 1000;                           // Hz, -3dB corner frequency
+  filter.fc = 1000.0;                         // Hz, -3dB corner frequency
 
   // calculate filter coefficients (TI calls them N0, N1 & D1) for an IIR (1st order) filter
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ,                // audio sample rate
@@ -113,7 +113,7 @@ void setup()
 
 ### Example 3: BiQuad (4th order) High Pass Filter
 
-The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Therefore frequencies below the set corner frequency get strongly attenuated.
+The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Therefore frequencies below the set corner frequency get strongly attenuated. Q is chosen differently to keep -3dB attenuation at fc.
 
 ```c
 ...
@@ -127,25 +127,31 @@ tlv320_filter_param_t filter;
 void setup()
 {
   ...
-  // setting parameters for BiQuad filter blocks
-  filter.fc = 1500.0;                         // Hz, -3dB corner frequency
-  filter.gain = 1.0;                          // dB, filter gain per block
+  // setting filter parameter for first BiQuad filter block
+  filter.fc = 1000.0;                           // Hz, -3dB corner frequency
+  filter.Q = 1 / 0.7654;
 
-  // calculate filter coefficients (TI calls them N0, N1, N2, D1 & D2) for a BiQuad (2nd order) filter
-  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ,                 // audio sample rate
-                                     TLV320_FILTER_TYPE_HIGH_PASS,  // filter type
-                                     TLV320_FILTER_BIQUAD,          // 2nd order filter
-                                     &filter)) {                    // keeps filter settings
+  // calculate coefficients for first Biquad filter block
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
+                                    TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
-  // program the calculated filter coefficients into the BiQuad signal processing blocks
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
                         TLV320_FILTER_BIQUAD_A,  // using BiQuadA filter block
                         &filter)) {              // pointer to filter settings
     halt("Failed to set BiQuadA filter!");
+  }
+
+  // changing filter parameter for second BiQuad filter block, explanation see above
+  filter.Q = 1 / 1.8478;
+
+  // calculate coefficients for second Biquad filter block
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
+                                    TLV320_FILTER_BIQUAD, &filter)) {
+    halt("Failed to calculate BiQuad filter coefficients!");
   }
 
   if (!dac.setDACFilter(true,                    // enable filtering
