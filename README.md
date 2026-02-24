@@ -21,7 +21,7 @@ A very good point to start from is Texas Instrument's [**COEFFICIENT-CALC — Co
 
 Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters and additionally N2 & D2 for 2nd order filters) and program them into a IIR/BiQuad filter block with function setDACFilter().
 
-In case you need to change the coefficients dynamically while your program is running you can call calcDACFilterCoefficients() before calling setDACFilter().
+In case you need to calculate and change the coefficients dynamically while your program is running you can first call calcDACFilterCoefficients() before writing the coefficients with setDACFilter().
 
 Below examples show the general use of calcDACFilterCoefficients() and setDACFilter() on typical filters.
 
