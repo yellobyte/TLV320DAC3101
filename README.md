@@ -205,7 +205,7 @@ void setup()
 
 ### Example 5: BiQuad (2nd order) peaking EQ Filter
 
-The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=200Hz and gain=+12dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
+The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=200Hz and peak gain=+12dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
 
 ```c
 ...
@@ -244,7 +244,7 @@ void setup()
 
 ### Example 6: BiQuad (4th order) Bass Shelf Filter
 
-The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=800Hz and gain=+8dB per block activated. Therefore the frequency spectrum below 800Hz will get a constant 16dB boost.
+The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=800Hz and gain=+8dB per block activated. Therefore the whole frequency spectrum below 800Hz will get a constant boost.
 
 ```c
 ...
