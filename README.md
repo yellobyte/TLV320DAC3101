@@ -11,6 +11,20 @@ To install the library into your **IDE** open the **Library Manager**, search fo
 
 ## :information_source: Code samples for audio processing with the TLV320DAC3101
 
+The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is very complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order. For example, in order to get a low pass Butterworth filter of higher order and therefore sharper filter curve you can simply cascade 2 BiQuad low pass Butterworth filters.
+
+However, your -3dB point at the LPF corner frequency fc on a single BiQuad filter curve now turns into a -6dB point with the two BiQuads cascaded and your achieved filter curve will look slightly different from the expected one. A typical low pass Butterworth filter realized with a BiQuad (2nd order) has a Q of 0.707 (1/SQRT(2)). In order to regain your -3dB point at fc you now need to set Q of the two cascaded BiQuads differently, in this case one to Q=1/0.7654 and the other one to Q 1/1.8478.
+
+BiQuads and esp. cascaded filter systems can get unstable very quickly by setting slightly wrong coefficients, chosing the overall filter gain too high, etc. So in order to avoid this, you could start with a filter of lower order, bigger bandwidth (notch, EQ) and lower gain, test it to be stable and then if needed decrease bandwidth, increase gain and order (one IIR block + one BiQuad block makes 3rd order, two BiQuads make 4th order, etc.).
+
+A very good point to start from is Texas Instrument's [**COEFFICIENT-CALC — Coefficient Calculator For Digital Biquad Filters**](https://www.ti.com/tool/COEFFICIENT-CALC) with graphical user interface (GUI). It targets TI's TLV320 product series and shows the filter curves of single and/or cascaded filter blocks, lets you play with frequency, gain, bandwidth, Q and even indicates if a setting becomes unstable. It calculates all filter coefficients for you and makes it very simple to get good results quickly.
+
+Then take the calculated filter coefficients (N0, N1 & D0 for 1st order filters and additionally N2 & D1 for 2nd order filters) and program them into a IIR/BiQuad filter block with function setDACFilter().
+
+In case you need to change the coefficients dynamically while your program is running you can call calcDACFilterCoefficients() before calling setDACFilter().
+
+Below examples show the general use of calcDACFilterCoefficients() and setDACFilter() on typical filters.
+
 ### Example 1: IIR (1st order) Low Pass Filter
 
 The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the set corner frequency get slightly attenuated.
@@ -57,7 +71,7 @@ void setup()
 
 ### Example 2: IIR (1st order) High Pass Filter
 
-The TLV320DAC3101 has an IIR (1st order) high pass filter activated on both audio channels (left & right) and therefore frequencies below a set corner frequency get slightly attenuated.
+The TLV320DAC3101 has an IIR (1st order) high pass filter activated only on the left audio channel. Frequencies below the set corner frequency of fc=1kHz get slightly attenuated on that channel.
 
 ```c
 ...
@@ -76,7 +90,8 @@ void setup()
     halt("Failed to configure Processing Block!");
   }
 
-  // setting IIR signal processing block coefficients N0, N1, D1 manually
+  // Setting IIR signal processing block coefficients N0, N1, D1 manually,
+  // they represent fc=1000Hz, gain=0.0dB.
   filter.N0H = 0x77;
   filter.N0L = 0x78;
   filter.N1H = 0x88;
@@ -87,7 +102,7 @@ void setup()
   // program the filter coefficients into the IIR signal processing block
   if (!dac.setDACFilter(true,                 // enable filtering
                         true,                 // on left channel
-                        true,                 // and on right channel
+                        false,                // but not on right channel
                         TLV320_FILTER_IIR,    // using IIR filter block
                         &filter)) {           // pointer to filter settings
     halt("Failed to configure IIR filter!");
@@ -268,8 +283,21 @@ void setup()
   ...
 }
 ```
+### Example 7: Disabling filter block BiQuadA on both channels
 
-### Example 7: Dynamic Range Compression (DRC)
+```c
+  ...
+  if (!dac.setDACFilter(false,                   // disable filtering
+                        true,                    // on left channel
+                        true,                    // and on right channel
+                        TLV320_FILTER_BIQUAD_A,  // using BiQuadA filter block
+                        NULL)) {                 // not needed in this case
+    halt("Failed to disable BiQuadA filter!");
+  }
+  ...
+```
+
+### Example 8: Dynamic Range Compression (DRC)
 
 An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
 
@@ -292,7 +320,7 @@ void setup()
 }
 ```
 
-### Example 8: Using the integrated Beep Generator
+### Example 9: Using the integrated Beep Generator
 
 Only the digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback etc.
 

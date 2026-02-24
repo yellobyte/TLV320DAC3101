@@ -1,15 +1,15 @@
 /*
-  BiQuad High Pass Filter (of 6th order)
+  BiQuad High Pass Filter (of 4th order)
 
   An ESP32 background thread is feeding the TLV320 with a sine tone sweep 50Hz...5kHz.
-  The TLV320DAC3101 Stereo Audio DAC has three cascaded BiQuad (2nd order) high pass filters
-  pro channel activated. Together they form a high pass filter of 6th order per channel,
+  The TLV320DAC3101 Stereo Audio DAC has two cascaded BiQuad (2nd order) high pass filters
+  pro channel activated. Together they form a high pass filter of 4th order per channel,
   which has a much steeper filter curve than a single BiQuad filter alone. Therefore
   frequencies below the set corner frequency get strongly attenuated. The audio signal
   is output on both the speaker and headphone sockets.
 
   Processing block PRB_P1 (default) contains 3 BiQuad filter blocks (A, B, C) per channel.
-  We configure and use all three of them.
+  We configure and use only two of them.
 
   The example accepts the following serial input:
    - d...disables filtering,
@@ -21,7 +21,7 @@
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-02-20, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-02-24, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
@@ -138,14 +138,11 @@ void setup() {
     halt("Failed to power up PLL!");
   }
 
-  // setting filter parameter for a high pass filter
-  filter.fc = (float)FREQU_C;                // -3dB corner frequency
-  // instead of using the function below one could set filter coefficients manually
-  // filter.N0H = 0x71,
-  // filter.N0L = 0xF6,
-  // ...
+  // setting filter parameter for first BiQuad filter block
+  filter.fc = (float)FREQU_C;
+  filter.Q = 1 / 0.7654;                         // for explanation see README.md
 
-  // calculate coefficients for the Biquad filter blocks
+  // calculate coefficients for first Biquad filter block
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
                                     TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
@@ -159,20 +156,21 @@ void setup() {
     halt("Failed to set BiQuadA filter!");
   }
 
+  // changing filter parameter for second BiQuad filter block
+  filter.Q = 1 / 1.8478;                         // for explanation see README.md 
+
+  // calculate coefficients for second Biquad filter block
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
+                                    TLV320_FILTER_BIQUAD, &filter)) {
+    halt("Failed to calculate BiQuad filter coefficients!");
+  }
+
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
                         TLV320_FILTER_BIQUAD_B,  // using BiQuadB filter block
                         &filter)) {              // pointer to filter settings
     halt("Failed to set BiQuadB filter!");
-  }
-
-  if (!dac.setDACFilter(true,                    // enable filtering
-                        true,                    // on left channel
-                        true,                    // and on right channel
-                        TLV320_FILTER_BIQUAD_C,  // using BiQuadC filter block
-                        &filter)) {              // pointer to filter settings
-    halt("Failed to set BiQuadC filter!");
   }
 
   // Configure DAC path - now power up both left and right DACs
@@ -241,16 +239,14 @@ void loop() {
     if (*buf == 'e') {                // enable filtering on left and right channel
       Serial.println("---> enable low pass filtering");
       if (!dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_A, &filter) ||
-          !dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_B, &filter) ||
-          !dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_C, &filter)) {
+          !dac.setDACFilter(true, true, true, TLV320_FILTER_BIQUAD_B, &filter)) {
         Serial.println("Failed to enable filtering !");
       }
     }
     else if (*buf == 'd') {           // disable filtering on left and right channel
       Serial.println("---> disable low pass filtering");
       if (!dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_A, NULL) ||
-          !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_B, NULL) ||
-          !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_C, NULL)) {
+          !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_B, NULL)) {
         Serial.println("Failed to disable filtering !");
       }
     }

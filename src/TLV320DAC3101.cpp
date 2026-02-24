@@ -157,7 +157,7 @@ bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
     drc_hpf_coeffs = (drc_param->hpf_coeffs != NULL) ? drc_param->hpf_coeffs : drc_hpf_coeffs_default;
   }
   else {
-    // use recommended settings, Ch. 6.3.10.4.2...5
+    // use recommended settings, Ch. 6.3.10.4.1...5
     if (!drc1_thres.write(TLV320_DRC_THRESHOLD_MINUS_24DB)) return false;
     if (!drc1_hyst.write(TLV320_DRC_HYST_3DB)) return false;
     if (!drc2_hold.write(TLV320_DRC_HOLD_TIME_DISABLED)) return false;
@@ -345,7 +345,8 @@ bool TLV320DAC3101::calcDACFilterCoefficients(float sample_frequency, tlv320_fil
 
     switch (type) {
       case TLV320_FILTER_TYPE_LOW_PASS:
-        Q = 0.707;                    // Q is a constant for 2nd order Butterworth LPF
+        Q = (param->Q > 0.0) ? param->Q :      // take user setting
+                               0.707;          // default Q of 2nd order Butterworth LPF
         wc = 2 * M_PI * param->fc;
         k = wc / tan(M_PI * param->fc / sample_frequency);
 
@@ -360,7 +361,8 @@ bool TLV320DAC3101::calcDACFilterCoefficients(float sample_frequency, tlv320_fil
         break;
 
       case TLV320_FILTER_TYPE_HIGH_PASS:
-        Q = 0.707;                    // Q is a constant for 2nd order Butterworth HPF
+        Q = (param->Q > 0.0) ? param->Q :      // take user setting
+                               0.707;          // default Q of 2nd order Butterworth LPF
         wc = 2 * M_PI * param->fc;
         k = wc / tan(M_PI * param->fc / sample_frequency);
 
