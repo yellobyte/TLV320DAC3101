@@ -19,7 +19,7 @@ BiQuads and esp. cascaded filter systems can get unstable very quickly by settin
 
 A very good point to start from is Texas Instrument's [**COEFFICIENT-CALC — Coefficient Calculator For Digital Biquad Filters**](https://www.ti.com/tool/COEFFICIENT-CALC) with graphical user interface (GUI). It targets TI's TLV320 product series and shows the filter curves of single and/or cascaded filter blocks, lets you play with frequency, gain, bandwidth, Q and even indicates if a setting becomes unstable. It calculates all filter coefficients for you and makes it very simple to get good results quickly.
 
-Then take the calculated filter coefficients (N0, N1 & D0 for 1st order filters and additionally N2 & D1 for 2nd order filters) and program them into a IIR/BiQuad filter block with function setDACFilter().
+Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters and additionally N2 & D2 for 2nd order filters) and program them into a IIR/BiQuad filter block with function setDACFilter().
 
 In case you need to change the coefficients dynamically while your program is running you can call calcDACFilterCoefficients() before calling setDACFilter().
 
