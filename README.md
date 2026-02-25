@@ -326,7 +326,44 @@ void setup()
 }
 ```
 
-### Example 9: Using the integrated Beep Generator
+### Example 9: Dynamic Range Compression (DRC) with non-standard settings
+
+The same as above but with user defined DRC settings:
+
+```c
+...
+#include "TLV320DAC3101.h"
+
+// non-standard DRC LPF/HPF coefficients as used in example in Ch. 6.3.10.4.6
+uint8_t my_drc_lpf_coeffs[6] = {0x00, 0x11, 0x00, 0x11, 0x7F, 0xDE};
+uint8_t my_drc_hpf_coeffs[6] = {0x7F, 0xAB, 0x80, 0x55, 0x7F, 0x56};
+
+TLV320DAC3101 dac;
+tlv320_drc_param_t drc;
+
+void setup()
+{
+  ...
+  // they stay standard if not set
+  //drc.threshold  = TLV320_DRC_THRESHOLD_MINUS_21DB;
+  //drc.hyst       = TLV320_DRC_HYST_2DB;
+  drc.hold       = TLV320_DRC_HOLD_TIME_32_SAMPLES;
+  drc.attack     = TLV320_DRC_ATTACK_RATE_0_00390625DB;
+  drc.decay      = TLV320_DRC_DECAY_RATE_0_000488281DB;
+  drc.lpf_coeffs = my_drc_lpf_coeffs;
+  drc.hpf_coeffs = my_drc_hpf_coeffs;
+
+  if (!dac.setDRC(true,                // enable DRC
+                  true,                // on left channel and
+                  true,                // on right channel
+                  &drc)) {             // with non-standard settings
+    halt("Failed to configure DRC!");
+  }
+  ...
+}
+```
+
+### Example 10: Using the integrated Beep Generator
 
 Only the digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback etc.
 
