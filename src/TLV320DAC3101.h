@@ -282,7 +282,7 @@ typedef struct {
 
 typedef struct {
   float sample_frequency { 0.0 };                            // forces the user to at least set a sample frequency
-  tlv320dac3100_format_t i2s_format                          // default I2S data format: I2S (Philips standard)    
+  tlv320dac3100_format_t i2s_format                          // default I2S data format: I2S (Philips standard)
                          { TLV320DAC3100_FORMAT_I2S };
   tlv320dac3100_data_len_t i2s_data_len                      // default I2S data length: 16 bits
                          { TLV320DAC3100_DATA_LEN_16 };
@@ -332,7 +332,8 @@ private:
   bool refactorB(double *b0, double *b1, double *b2);
 
   Adafruit_I2CDevice *i2c_dev = new Adafruit_I2CDevice(TLV320DAC3100_I2CADDR_DEFAULT, &Wire);
-  float m_dac_gain_l, m_dac_gain_r;
+  float m_dac_gain_l { 0.0 },
+        m_dac_gain_r { 0.0 };
   uint8_t m_hp_volume_l, m_hp_volume_r,
           m_spk_volume_l, m_spk_volume_r;
   String m_last_error { "" };
