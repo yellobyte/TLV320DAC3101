@@ -27,7 +27,7 @@ Below examples show the general use of calcDACFilterCoefficients() and setDACFil
 
 ### Example 1: IIR (1st order) Low Pass Filter
 
-The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the set corner frequency get slightly attenuated.
+The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the set corner frequency get attenuated.
 
 ```c
 ...
@@ -71,7 +71,7 @@ void setup()
 
 ### Example 2: IIR (1st order) High Pass Filter
 
-The TLV320DAC3101 has an IIR (1st order) high pass filter activated only on the left audio channel. Frequencies below the set corner frequency of fc=1kHz get slightly attenuated on that channel.
+The TLV320DAC3101 has an IIR (1st order) high pass filter activated only on the left audio channel. Frequencies below the set corner frequency of fc=1kHz get attenuated on that channel.
 
 ```c
 ...
@@ -113,7 +113,7 @@ void setup()
 
 ### Example 3: BiQuad (4th order) High Pass Filter
 
-The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Therefore frequencies below the set corner frequency get strongly attenuated. Q is chosen differently to keep -3dB attenuation at fc. Explanation see above.
+The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Filter Q is chosen differently to keep -3dB attenuation at fc. Explanation see above.
 
 ```c
 ...
@@ -132,7 +132,7 @@ void setup()
   filterA.Q = 1 / 0.7654;
   filterB.Q = 1 / 1.8478;
 
-  // calculate coefficients for Biquad filter blocks
+  // calculate coefficients for the two Biquad filter blocks
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
                                     TLV320_FILTER_BIQUAD, &filterA) ||
       !dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_HIGH_PASS,
@@ -162,7 +162,7 @@ void setup()
 
 ### Example 4: BiQuad (2nd order) Notch Filter
 
-The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz will get attenuated.
+The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz get attenuated.
 
 ```c
 ...
