@@ -9,7 +9,7 @@
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-03-06, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-03-08, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
@@ -65,7 +65,7 @@ void setup() {
   digitalWrite(TLV_RESET, HIGH);
 
   // TLV320DAC3101 Audio DAC initialization
-  cfg.sample_frequency = SAMPLERATE_HZ;  // Hz, must be defined
+  cfg.sample_frequency = SAMPLERATE_HZ;  // Hz, must be set
   cfg.dac_gain_left = 5.0;               // dB, defaults to 0dB when not set,
   cfg.dac_gain_right = 5.0;              // allowed range: -63.5...+24.0 dB
 
@@ -78,22 +78,22 @@ void setup() {
     halt("Failed to configure processing block!");
   }
 
-  // setting Beep generator
+  // config Beep generator
   if (!dac.configureBeepTone(1000.0, 100, SAMPLERATE_HZ) ||  // fBeep = 1000Hz, duration = 100ms
       !dac.setBeepVolume(-15, -15)) {                        // beep volume L/R = -15dB
     halt("Failed to configure beep settings!");
   }
 
-  // activating headphone output and setting headphone volume
-  if (!dac.initHeadphoneOutput(true,                // enable headphone output
-                               false,               // HP(L/R) output driver acts as headphone driver
-                               90)) {               // set volume (allowed range: 0(quiet)...127(loud))
+  // activate headphone output and set headphone volume
+  if (!dac.configHeadphoneOutput(true,              // enable headphone output
+                                 false,             // HP(L/R) output driver acts as headphone driver
+                                 90)) {             // set volume (allowed range: 0(quiet)...127(loud))
     halt("Failed to configure headphone output!");
   }
 
-  // activating speaker output and setting speaker volume
-  if (!dac.initSpeakerOutput(true,                // enable speaker output
-                             115)) {              // set volume (allowed range: 0(quiet)...127(loud))
+  // activate speaker output and set speaker volume
+  if (!dac.configSpeakerOutput(true,              // enable speaker output
+                               115)) {            // set volume (allowed range: 0(quiet)...127(loud))
     halt("Failed to configure speaker output!");
   }
   Serial.println("TLV320 DAC config done!");

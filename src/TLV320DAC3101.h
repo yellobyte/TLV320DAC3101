@@ -75,6 +75,17 @@
 #define TLV320DAC3100_REG_DAC_LBQC_D2H  0x1E // DAC Left BiQuadC Coeff D2 (15:8)
 #define TLV320DAC3100_REG_DAC_LBQC_D2L  0x1F // DAC Left BiQuadC Coeff D2 (7:0)
 
+#define TLV320DAC3100_REG_DAC_LBQD_N0H  0x20 // DAC Left BiQuadD Coeff N0 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQD_N0L  0x21 // DAC Left BiQuadD Coeff N0 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQD_N1H  0x22 // DAC Left BiQuadD Coeff N1 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQD_N1L  0x23 // DAC Left BiQuadD Coeff N1 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQD_N2H  0x24 // DAC Left BiQuadD Coeff N2 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQD_N2L  0x25 // DAC Left BiQuadD Coeff N2 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQD_D1H  0x26 // DAC Left BiQuadD Coeff D1 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQD_D1L  0x27 // DAC Left BiQuadD Coeff D1 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQD_D2H  0x28 // DAC Left BiQuadD Coeff D2 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQD_D2L  0x29 // DAC Left BiQuadD Coeff D2 (7:0)
+
 #define TLV320DAC3100_REG_DAC_RBQA_N0H  0x42 // DAC Right BiQuadA Coeff N0 (15:8)
 #define TLV320DAC3100_REG_DAC_RBQA_N0L  0x43 // DAC Right BiQuadA Coeff N0 (7:0)
 #define TLV320DAC3100_REG_DAC_RBQA_N1H  0x44 // DAC Right BiQuadA Coeff N1 (15:8)
@@ -108,7 +119,18 @@
 #define TLV320DAC3100_REG_DAC_RBQC_D2H  0x5E // DAC Right BiQuadC Coeff D2 (15:8)
 #define TLV320DAC3100_REG_DAC_RBQC_D2L  0x5F // DAC Right BiQuadC Coeff D2 (7:0)
 
-// BQD...BQF tbd
+#define TLV320DAC3100_REG_DAC_RBQD_N0H  0x60 // DAC Right BiQuadD Coeff N0 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQD_N0L  0x61 // DAC Right BiQuadD Coeff N0 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQD_N1H  0x62 // DAC Right BiQuadD Coeff N1 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQD_N1L  0x63 // DAC Right BiQuadD Coeff N1 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQD_N2H  0x64 // DAC Right BiQuadD Coeff N2 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQD_N2L  0x65 // DAC Right BiQuadD Coeff N2 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQD_D1H  0x66 // DAC Right BiQuadD Coeff D1 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQD_D1L  0x67 // DAC Right BiQuadD Coeff D1 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQD_D2H  0x68 // DAC Right BiQuadD Coeff D2 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQD_D2L  0x69 // DAC Right BiQuadD Coeff D2 (7:0)
+
+// BQE+BQF tbd
 
 // Page 9/13 DAC Coefficient-RAM
 #define TLV320DAC3100_REG_DAC_LIIR_N0H   0x02 // DAC Left IIR Filter Coeff N0 (15:8)
@@ -282,7 +304,7 @@ typedef struct {
 
 typedef struct {
   float sample_frequency { 0.0 };                            // forces the user to at least set a sample frequency
-  tlv320dac3100_format_t i2s_format                          // default I2S data format: I2S (Philips standard)
+  tlv320dac3100_format_t i2s_format                          // default I2S data format: I2S (Philips standard)    
                          { TLV320DAC3100_FORMAT_I2S };
   tlv320dac3100_data_len_t i2s_data_len                      // default I2S data length: 16 bits
                          { TLV320DAC3100_DATA_LEN_16 };
@@ -299,11 +321,11 @@ typedef struct {
 class TLV320DAC3101 : public Adafruit_TLV320DAC3100 {
 public:
   TLV320DAC3101() : Adafruit_TLV320DAC3100() {};   // Constructor
-  bool initDAC(tlv320_init_config_t *cfg, bool dac_on = true);
-  bool initHeadphoneOutput(bool enable = true, bool lineout = false, uint8_t vol = 0);
-  bool initSpeakerOutput(bool enable = true, uint8_t vol = 0);
   bool getRegisterValue(uint8_t page, uint8_t registr, uint8_t *value);
   bool getRegisterValue(uint8_t page, uint8_t registr, uint16_t *value);
+  bool initDAC(tlv320_init_config_t *cfg, bool dac_on = true);
+  bool configHeadphoneOutput(bool enable = true, bool lineout = false, uint8_t vol = 0);
+  bool configSpeakerOutput(bool enable = true, uint8_t vol = 0);
   bool enableSpeaker(bool en);
   bool configureSPK_PGA(tlv320_spk_gain_t gain, bool unmute);
   bool setHeadphoneVolume(uint8_t vol, bool left_channel = true, bool right_channel = true);
@@ -333,7 +355,7 @@ private:
   bool refactorB(double *b0, double *b1, double *b2);
 
   Adafruit_I2CDevice *i2c_dev = new Adafruit_I2CDevice(TLV320DAC3100_I2CADDR_DEFAULT, &Wire);
-  float m_dac_gain_l { 0.0 },
+  float m_dac_gain_l { 0.0 }, 
         m_dac_gain_r { 0.0 };
   uint8_t m_hp_volume_l, m_hp_volume_r,
           m_spk_volume_l, m_spk_volume_r;

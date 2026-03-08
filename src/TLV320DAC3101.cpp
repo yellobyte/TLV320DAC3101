@@ -163,7 +163,7 @@ bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
   return true;
 }
 
-bool TLV320DAC3101::initHeadphoneOutput(bool enable, bool lineout, uint8_t vol)
+bool TLV320DAC3101::configHeadphoneOutput(bool enable, bool lineout, uint8_t vol)
 {
   if (!configureHeadphoneDriver(enable, enable,          // power up L/R drivers
                                 TLV320_HP_COMMON_1_65V,  // default common mode level for VCC=3.3V
@@ -202,7 +202,7 @@ bool TLV320DAC3101::setHeadphoneVolume(uint8_t vol,          // volume range: 0 
   return true;
 }
 
-bool TLV320DAC3101::initSpeakerOutput(bool enable, uint8_t vol)
+bool TLV320DAC3101::configSpeakerOutput(bool enable, uint8_t vol)
 {
   if (!enableSpeaker(enable) ||               // disable/enable speaker amps
       !configureSPK_PGA(TLV320_SPK_GAIN_6DB,  // set gain to 6dB (minimum)
