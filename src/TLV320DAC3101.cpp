@@ -1002,6 +1002,11 @@ bool TLV320DAC3101::refactorB(double *b0, double *b1, double *b2)
   return true;
 }
 
+String TLV320DAC3101::getLastError() 
+{
+  return m_last_error;
+}
+
 #ifdef _DEBUG_
 //
 // Only for debugging purposes. Print various DAC register values.

@@ -318,6 +318,7 @@ public:
                     tlv320_filter_t filter, tlv320_filter_param_t *param = NULL);
   bool setAdaptiveMode(bool enable);
   bool getAdaptiveMode();
+  String getLastError();
 
 #ifdef _DEBUG_
     void printRegisterSettings(const char *s = "", uint32_t select = (uint32_t)0xFFFFF);
