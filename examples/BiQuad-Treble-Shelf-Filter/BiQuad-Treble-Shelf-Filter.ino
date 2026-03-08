@@ -193,7 +193,7 @@ void loop() {
       Serial.println("---> disable treble shelf filter");
       if (!dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_A) ||
           !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_B)) {
-        halt("Failed to disable filteringded!");
+        halt("Failed to disable filtering!");
       }
     }
     else if (*buf == 'a') {                   // toggle adaptive mode
