@@ -191,9 +191,9 @@ void loop() {
     }
     else if (*buf == 'd') {                   // disable filtering
       Serial.println("---> disable bass shelf filter");
-      if (!dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_A, NULL) ||
-          !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_B, NULL)) {
-        halt("Failed to disable filteringded!");
+      if (!dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_A) ||
+          !dac.setDACFilter(false, true, true, TLV320_FILTER_BIQUAD_B)) {
+        halt("Failed to disable filtering!");
       }
     }
     else if (*buf == 'a') {                   // toggle adaptive mode
