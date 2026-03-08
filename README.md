@@ -11,7 +11,7 @@ To install the library into your **IDE** open the **Library Manager**, search fo
 
 ## :information_source: Code samples for audio processing with the TLV320DAC3101
 
-The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is very complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order. For example, in order to get a low pass Butterworth filter of higher order and therefore sharper filter curve you can simply cascade 2 BiQuad low pass Butterworth filters.
+The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order. For example, in order to get a low pass Butterworth filter of higher order and therefore sharper filter curve you can simply cascade 2 BiQuad low pass Butterworth filters.
 
 However, your -3dB point at the LPF corner frequency fc on a single BiQuad filter curve now turns into a -6dB point with the two BiQuads cascaded and your achieved filter curve will look slightly different from the expected one. A typical low pass Butterworth filter realized with a BiQuad (2nd order) has a Q of 0.707 (1/SQRT(2)). In order to regain your -3dB point at fc you now need to set Q of the two cascaded BiQuads differently, in this case one to Q=1/0.7654 and the other one to Q=1/1.8478.
 
@@ -46,7 +46,7 @@ void setup()
     halt("Failed to configure Processing Block!");
   }
 
-  // setting fc parameter for a low pass filter
+  // set fc parameter for a low pass filter
   filter.fc = 1000.0;                         // Hz, -3dB corner frequency
 
   // calculate filter coefficients (TI calls them N0, N1 & D1) for an IIR (1st order) filter
@@ -57,7 +57,7 @@ void setup()
     halt("Failed to calculate IIR filter coefficients!");
   }
 
-  // programming calculated filter coefficients into IIR signal processing block
+  // write calculated filter coefficients into IIR signal processing block
   if (!dac.setDACFilter(true,                 // enable filtering
                         true,                 // on left channel
                         true,                 // and on right channel
@@ -90,7 +90,7 @@ void setup()
     halt("Failed to configure Processing Block!");
   }
 
-  // setting IIR signal processing block coefficients N0, N1, D1 manually,
+  // set IIR signal processing block coefficients N0, N1, D1 manually,
   // they represent a HPF with fc=1000Hz and no gain
   filter.N0H = 0x77;
   filter.N0L = 0x78;
@@ -99,7 +99,7 @@ void setup()
   filter.D1H = 0x6E;
   filter.D1L = 0xF2;
 
-  // programming filter coefficients into IIR signal processing block
+  // write filter coefficients into IIR signal processing block
   if (!dac.setDACFilter(true,                 // enable filtering
                         true,                 // on left channel
                         false,                // but not on right channel
@@ -127,7 +127,7 @@ tlv320_filter_param_t filterA, filterB;
 void setup()
 {
   ...
-  // setting filter parameters for BiQuad filter blocks
+  // set filter parameters for BiQuad filter blocks
   filterA.fc = filterB.fc = 1000.0;              // Hz, -3dB corner frequency
   filterA.Q = 1 / 0.7654;
   filterB.Q = 1 / 1.8478;
@@ -140,7 +140,7 @@ void setup()
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
-  // programming filter coefficients into BiQuad signal processing blocks
+  // write filter coefficients into BiQuad signal processing blocks
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -176,17 +176,17 @@ tlv320_filter_param_t filter;
 void setup()
 {
   ...
-  // setting parameters for the BiQuad filter block
+  // set parameters for the BiQuad filter block
   filter.fc = 1500.0;                            // Hz, notch center frequency
   filter.bw = 200.0  ;                           // Hz, -3dB filter bandwidth
 
-  // calculating BiQuad coefficients
+  // calculate BiQuad coefficients
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_NOTCH,
                                     TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
-  // programming calculated filter coefficients into BiQuad signal processing block
+  // write calculated filter coefficients into BiQuad signal processing block
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -214,18 +214,18 @@ tlv320_filter_param_t filter;
 void setup()
 {
   ...
-  // setting parameters for the BiQuad filter block
+  // set parameters for the BiQuad filter block
   filter.fc = 1500.0;                            // Hz, EQ center frequency
   filter.bw = 200.0;                             // Hz, EQ filter bandwidth
   filter.gain = 12.0;                            // dB, EQ filter peak gain
 
-  // calculating BiQuad coefficients
+  // calculate BiQuad coefficients
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_EQ,
                                      TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
-  // programming calculated filter coefficients into BiQuad signal processing block
+  // write calculated filter coefficients into BiQuad signal processing block
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -253,19 +253,19 @@ tlv320_filter_param_t filter;
 void setup()
 {
   ...
-  // setting parameters for BiQuad filter blocks
+  // set parameters for BiQuad filter blocks
   filter.fc = 800.0;                             // Hz, frequencies below 800Hz get boosted
   filter.gain = 8.0;                             // dB, filter gain below fc per BiQuad block
                                                  // Note: setting the overall gain too high might cause
                                                  // the filter to become unstable!
 
-  // calculating coefficients for Biquad filter blocks
+  // calculate coefficients for Biquad filter blocks
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_BASS_SHELF,
                                      TLV320_FILTER_BIQUAD, &filter)) {
     halt("Failed to calculate BiQuad filter coefficients!");
   }
 
-  // programming calculated filter coefficients into BiQuad signal processing blocks
+  // write calculated filter coefficients into BiQuad signal processing blocks
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -284,7 +284,7 @@ void setup()
   ...
 }
 ```
-### Example 7: Disabling filter block BiQuadA on both channels
+### Example 7: Disable filter block BiQuadA on both channels
 
 ```c
   ...
@@ -358,7 +358,7 @@ void setup()
 }
 ```
 
-### Example 10: Using the integrated Beep Generator
+### Example 10: Use the integrated Beep Generator
 
 Only the digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback etc.
 
