@@ -173,7 +173,7 @@ void setup() {
   xTaskCreate(backgroundTask, "bgTask", 4096, NULL, 1, NULL);
   delay(50);
 
-  // The adaptive mode gets enabled with I2S bus already active and DACs powered up.
+  // adaptive mode gets enabled with I2S bus already active and DACs powered up
   dac.setAdaptiveMode(true);
 }
 

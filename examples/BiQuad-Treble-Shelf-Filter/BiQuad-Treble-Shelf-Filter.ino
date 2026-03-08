@@ -12,7 +12,7 @@
   The example accepts the following serial input:
    - d...disables the filter,
    - e...enables the filter,
-   - a...toggles adaptive mode and
+   - a...toggles adaptive mode
 
   The following additional libraries are needed:
    - Adafruit_TLV320_I2S
@@ -39,7 +39,7 @@ i2s_slot_mode_t      slot  = I2S_SLOT_MODE_STEREO;      // 2 slots (stereo)
 #define INTERVAL      1            // ms, delay before changing to next frequency
 
 // defines the parameters of each BiQuad treble shelf filter block
-#define FREQU_C       2000         // Hz, frequencies above 2kHz get boosted
+#define FREQU_C       2000         // Hz, frequencies above 2kHz get a constant boost
 #define GAIN          10.0         // dB, constant filter block gain at frequencies above fc,
                                    // Note: setting the overall gain to high might cause
                                    // the filter to become unstable!
@@ -173,7 +173,7 @@ void setup() {
   xTaskCreate(backgroundTask, "bgTask", 4096, NULL, 1, NULL);
   delay(50);
 
-  // The adaptive mode gets enabled with I2S bus already active and DACs powered up.
+  // adaptive mode gets enabled with I2S bus already active and DACs powered up
   dac.setAdaptiveMode(true);
 }
 
