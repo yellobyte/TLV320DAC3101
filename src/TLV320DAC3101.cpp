@@ -37,6 +37,214 @@ bool TLV320DAC3101::setPage(uint8_t page)
   return page_reg.write(page);
 }
 
+bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
+{
+  uint8_t R, J, NDAC, MDAC;
+  uint16_t DOSR;
+
+  m_last_error = "";
+
+  // I2C bus init
+  if (!begin()) {
+    m_last_error = "Failed to initialize I2C interface!";
+    return false;
+  }
+  delay(10);
+
+  // I2S Interface Control
+  if (!setCodecInterface(cfg->i2s_format,cfg->i2s_data_len)) {
+    m_last_error = "Failed to configure I2S interface!";
+    return false;
+  }
+
+  // Clock MUX and PLL settings
+  if (!setCodecClockInput(cfg->codec_clk_input) || !setPLLClockInput(cfg->pll_clk_input)) {
+    m_last_error = "Failed to configure codec clocks!";
+    return false;
+  }
+
+  // Calculating PLL and DAC values is fully explained in the TLV320DAC3101 spec sheet. Please
+  // see https://www.ti.com/lit/ds/symlink/tlv320dac3101.pdf, Chapter 6.3 for more details.
+  // Settings change for various sample frequencies. The following general equations apply:
+  //  - BCLK = DAC_FSAMPLE * I2S_DATA_WIDTH * CHANNELS
+  //  - PLL_CLKOUT = PLL_CLKIN * R * J.D / P             (PLL clock dividers)
+  //  - DAC_FSAMPLE = CODEC_CLKIN / (NDAC * MDAC * DOSR) (DAC dividers)
+  //    --> NDAC * MDAC = CODEC_CLKIN / (DAC_FSAMPLE * DOSR)
+  // Various conditions must be satisfied:
+  //  - Ch. 6.3.11.1, PLL (6): R=1...16, J=1...63, D=0...9999, P=1...8,
+  //  - Ch. 6.3.11.1, PLL (7): 512kHz <= PLL_CLKIN <= 20MHz, 80MHz <= PLL_CLKOUT <= 110MHz and
+  //                           4 <= R * J <= 256
+  //  - Ch. 6.3.10.14, DAC:    2.8MHz < DOSR * DAC_FSAMPLE < 6.2MHz,
+  //                           MDAC * DOSR / 32 ≥ RC (e.g. RC=8 for PRB_P1, RC=12 for PRB_P2)
+  //  - Ch. 6.3.11, DAC:       NDAC,MDAC=1,2...128, DOSR=1,2...1024
+  // Chapter 6.3.11.1, Table 6-28 gives some PLL Example Configurations for typical scenarios.
+  //
+  // Below table shows adequate settings for common sample frequencies (sample width 16bit, stereo):
+  //
+  // DAC_FSAMPLE|BLCK=PLL_CLKIN|PLL_CLKOUT=CODEC_CLKIN |DOSR*DAC_FSAMPLE| R*J |NDAC*MDAC|MDAC*DOSR/32 |
+  //            | 0.5<=f<=20M  | P,R,J,D: 80<=f<=110M  | DOSR:          |<=256|         |    >=RC     |
+  // -----------|--------------|-----------------------|----------------|-----|---------|-------------|
+  //   16000    |  0.5120MHz   | 1,4,48,0:  98.3040MHz | 192: 3.0720MHz | 192 | 32: 8*4 | 4*192/32=24 |*
+  //   22050    |  0.7056MHz   | 1,4,32,0:  90.3168MHZ | 128: 2.8224MHz | 128 | 32: 8*4 | 4*128/32=16 |*
+  //   22050    |  0.7056MHz   | 1,4,36,0: 101.6064MHZ | 192: 4.2336MHz | 144 | 24:12*2 | 2*192/32=12 |
+  //   32000    |  1.0240MHz   | 1,2,48,0:  98.3040MHz | 128: 4.0960MHz |  96 | 24:12*2 | 2*128/32=8  |
+  //   32000    |  1.0240MHz   | 1,2,48,0:  98.3040MHz | 128: 4.0960MHz |  96 | 24: 6*4 | 4*128/32=16 |*
+  //   44100    |  1.4112MHz   | 1,2,32,0:  90.3168MHz | 128: 5.6448MHz |  64 | 16: 8*2 | 2*128/32=8  |
+  //   44100    |  1.4112MHz   | 1,2,32,0:  90.3168MHz | 128: 5.6448MHz |  64 | 16: 4*4 | 4*128/32=16 |*
+  //   48000    |  1.5360MHZ   | 1,2,32,0:  98.3040MHz | 128: 6.1440MHz |  64 | 16: 8*2 | 2*128/32=8  |
+  //   48000    |  1.5360MHZ   | 1,2,32,0:  98.3040MHz | 128: 6.1440MHz |  64 | 16: 4*4 | 4*128/32=16 |*
+
+  // configure PLL & DAC dividers
+  if (cfg->sample_frequency == 16000) {
+    R = 4; J = 48; NDAC = 8; MDAC = 4; DOSR = 192;
+  }
+  else if (cfg->sample_frequency == 22050) {
+    R = 4; J = 32; NDAC = 8; MDAC = 4; DOSR = 128;
+  }
+  else if (cfg->sample_frequency == 32000) {
+    R = 2; J = 48; NDAC = 6; MDAC = 4; DOSR = 128;
+  }
+  else if (cfg->sample_frequency == 44100 ||
+           cfg->sample_frequency == 48000) {
+    R = 2; J = 32; NDAC = 4; MDAC = 4; DOSR = 128;
+  }
+  else {
+    m_last_error = "Sample frequency not supported!";
+    return false;
+  }
+
+  if (!setPLLValues(1, R, J, 0)) {
+    m_last_error = "Failed to configure PLL values!";
+    return false;
+  }
+
+  if (!setNDAC(true, NDAC) || !setMDAC(true, MDAC) || !setDOSR(DOSR)) {
+    m_last_error = "Failed to configure DAC dividers!";
+    return false;
+  }
+
+  // Power up the PLL
+  if (!powerPLL(true)) {
+    m_last_error = "Failed to power up PLL!";
+    return false;
+  }
+
+  // standard DAC Setup
+  if (!setDACDataPath(dac_on, dac_on,                    // power up both DACs
+                      TLV320_DAC_PATH_NORMAL,            // normal left path
+                      TLV320_DAC_PATH_NORMAL,            // normal right path
+                      TLV320_VOLUME_STEP_1SAMPLE)) {     // step: 1 per sample
+    m_last_error = "Failed to configure DAC data path!";
+    return false;
+  }
+
+  if (!configureAnalogInputs(TLV320_DAC_ROUTE_MIXER,   // left DAC to mixer
+                             TLV320_DAC_ROUTE_MIXER,   // right DAC to mixer
+                             false, false, false,      // no AIN routing
+                             false)) {                 // no HPL->HPR
+    m_last_error = "Failed to configure DAC routing!";
+    return false;
+  }
+
+  m_dac_gain_l = cfg->dac_gain_left;
+  m_dac_gain_r = cfg->dac_gain_right;
+  if (m_dac_gain_l < -63.5) m_dac_gain_l = -63.5;
+  if (m_dac_gain_r < -63.5) m_dac_gain_r = -63.5;
+  if (m_dac_gain_l > 24.0) m_dac_gain_l = 24.0;
+  if (m_dac_gain_r > 24.0) m_dac_gain_r = 24.0;
+
+  if (!setDACVolumeControl(false, false, cfg->dac_gain_ctrl) ||  // unmute both channels
+      !setChannelVolume(false, m_dac_gain_l) ||                  // left DAC
+      !setChannelVolume(true, m_dac_gain_r)) {                   // right DAC
+    m_last_error = "Failed to configure DAC volumes!";
+    return false;
+  }
+
+  return true;
+}
+
+bool TLV320DAC3101::initHeadphoneOutput(bool enable, bool lineout, uint8_t vol)
+{
+  if (!configureHeadphoneDriver(enable, enable,          // power up L/R drivers
+                                TLV320_HP_COMMON_1_65V,  // default common mode level for VCC=3.3V
+                                false) ||                // don't power down on short circuit detection (SCD)
+      !configureHPL_PGA(0, enable) ||                    // set HPL gain to 0dB (default), unmute
+      !configureHPR_PGA(0, enable) ||                    // set HPR gain to 0dB (default), unmute
+      !headphoneLineout(lineout, lineout) ||             // false: HP(L/R) output driver acts as headphone driver
+                                                         // true: HP(L/R) output driver acts as lineout driver
+      !setHeadphoneVolume(vol,                           // set volume (allowed range: 0(quiet)...127(loud))
+                          true,                          // on left channel
+                          true)) {                       // and on right channel
+    return false;
+  }
+
+  return true;
+}
+
+bool TLV320DAC3101::setHeadphoneVolume(uint8_t vol,          // volume range: 0 (-78.3dB, quiet)...127 (0dB, loud)
+                                       bool left_channel,    // set on left channel
+                                       bool right_channel)   // set on right channel
+{
+  uint8_t val = vol;
+
+  if (val > 127) val = 127;
+  val = abs(val - 127);
+
+  if (left_channel) {
+    m_hp_volume_l = vol;  // 0...127
+    if (!setHPLVolume(true, val)) return false;
+  }
+  if (right_channel) {
+    m_hp_volume_r = vol;  // 0...127
+    if (!setHPRVolume(true, val)) return false;
+  }
+
+  return true;
+}
+
+bool TLV320DAC3101::initSpeakerOutput(bool enable, uint8_t vol)
+{
+  if (!enableSpeaker(enable) ||               // disable/enable speaker amps
+      !configureSPK_PGA(TLV320_SPK_GAIN_6DB,  // set gain to 6dB (minimum)
+                        enable) ||            // unmute
+      !setSpeakerVolume(vol,                  // set volume (allowed range: 0(quiet)...127(loud))
+                        true,                 // on left channel
+                        true)) {              // and on right channel
+    return false;
+  }
+
+  return true;
+}
+
+bool TLV320DAC3101::setSpeakerVolume(uint8_t vol,          // volume range: 0 (-78.3dB, quiet)...127 (0dB, loud)
+                                     bool left_channel,    // set on left channel
+                                     bool right_channel)   // set on right channel
+{
+  uint8_t val = vol;
+
+  if (val > 127) val = 127;
+  val = abs(val - 127);
+
+  if (left_channel) {
+    m_spk_volume_l = vol;  // 0...127
+    if (!Adafruit_TLV320DAC3100::setSPKVolume(true, val)) return false;
+  }
+
+  if (right_channel) {
+    m_spk_volume_r = vol;  // 0...127
+
+    if (!setPage(1)) return false;
+
+    Adafruit_BusIO_Register spk_volR = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_SPK_VOL + 1);
+    Adafruit_BusIO_RegisterBits routeR = Adafruit_BusIO_RegisterBits(&spk_volR, 1, 7);
+    Adafruit_BusIO_RegisterBits volR = Adafruit_BusIO_RegisterBits(&spk_volR, 7, 0);
+    if (!routeR.write(true)) return false;
+    return volR.write(val);
+  }
+
+  return true;
+}
+
 bool TLV320DAC3101::getRegisterValue(uint8_t page, uint8_t registr, uint8_t *value)
 {
   if (!setPage(page)) return false;
@@ -362,7 +570,7 @@ bool TLV320DAC3101::calcDACFilterCoefficients(float sample_frequency, tlv320_fil
 
       case TLV320_FILTER_TYPE_HIGH_PASS:
         Q = (param->Q > 0.0) ? param->Q :      // take user setting
-                               0.707;          // default Q of 2nd order Butterworth LPF
+                               0.707;          // default Q of 2nd order Butterworth HPF
         wc = 2 * M_PI * param->fc;
         k = wc / tan(M_PI * param->fc / sample_frequency);
 
@@ -570,10 +778,10 @@ bool TLV320DAC3101::getAdaptiveMode()
 #ifdef _DEBUG_
 __attribute__((optimize("O0")))
 #endif
-bool TLV320DAC3101::setDACFilter(bool enabled, bool left_channel, bool right_channel,
+bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_channel,
                                  tlv320_filter_t filter, tlv320_filter_param_t *param)
 {
-  // default coefficients for setting a filter back to linear (default)
+  // default coefficients for setting a filter block back to linear (default)
   uint8_t defaultCoeffs[10] = { 0x7F, 0xFF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
 
   uint16_t addr;
@@ -582,7 +790,9 @@ bool TLV320DAC3101::setDACFilter(bool enabled, bool left_channel, bool right_cha
        left_mute_orig = false, right_mute_orig = false;
   float left_vol_orig = 0, right_vol_orig = 0;
 
-  coeffs = (enabled && param != NULL) ? &(param->N0H) : defaultCoeffs;
+  if (enable && param == NULL) return false;
+
+  coeffs = (enable && param != NULL) ? &(param->N0H) : defaultCoeffs;
 
   Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
   Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
@@ -797,7 +1007,7 @@ bool TLV320DAC3101::refactorB(double *b0, double *b1, double *b2)
 // Only for debugging purposes. Print various DAC register values.
 //
 __attribute__((optimize("O0")))
-void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
+void TLV320DAC3101::printRegisterSettings(const char *s, uint32_t select)
 {
   uint8_t u8a, u8b, u8c, u8d, u8e, u8f, u8g, u8h, u8i;
   uint8_t buf[10];
@@ -829,7 +1039,7 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
   }
 
   if (select & P0_DRC) {
-  // DRC Control Register
+    // DRC Control Register
     if (getRegisterValue(0, TLV320DAC3100_REG_DRC_CONTROL_1, &u8a) &&
         getRegisterValue(0, TLV320DAC3100_REG_DRC_CONTROL_2, &u8b) &&
         getRegisterValue(0, TLV320DAC3100_REG_DRC_CONTROL_3, &u8c)) {
@@ -838,6 +1048,37 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint16_t select)
                     TLV320DAC3100_REG_DRC_CONTROL_1, u8a, (u8a>>6)&0x01, (u8a>>5)&0x01, (u8a>>2)&0x07, (u8a&0x03),
                     TLV320DAC3100_REG_DRC_CONTROL_2, u8b, (u8b>>3)&0x0F,
                     TLV320DAC3100_REG_DRC_CONTROL_3, u8c, (u8c>>4)&0x0F, (u8c&0x0F));
+    }
+  }
+
+  if (select & P0_INT) {
+    // DAC Interrupt Flags Register
+    if (getRegisterValue(0, TLV320DAC3100_REG_DAC_INTFLAGS_S, &u8a) &&
+        getRegisterValue(0, TLV320DAC3100_REG_DAC_INTFLAGS, &u8b)) {
+      Serial.printf("P0:INT_FLAGS_S(0x%02x)=0x%02x(D7=%u,D6=%u,D5=%u,D4=%u,D3=%u,D2=%u,D1=%u,D0=%u),\n"
+                    "   INT_FLAGS  (0x%02x)=0x%02x(D7=%u,D6=%u,D5=%u,D4=%u,D3=%u,D2=%u,D1=%u,D0=%u)\n",
+                    TLV320DAC3100_REG_DAC_INTFLAGS_S, u8a, (u8a>>7)&0x01, (u8a>>6)&0x01, (u8a>>5)&0x01, (u8a>>4)&0x01,
+                    (u8a>>3)&0x01, (u8a>>2)&0x01, (u8a>>1)&0x01, (u8a&0x01),
+                    TLV320DAC3100_REG_DAC_INTFLAGS, u8b, (u8b>>7)&0x01, (u8b>>6)&0x01, (u8b>>5)&0x01, (u8b>>4)&0x01,
+                    (u8b>>3)&0x01, (u8b>>2)&0x01, (u8b>>1)&0x01, (u8b&0x01));
+    }
+  }
+
+  if (select & P1_SPK) {
+    // Speaker Control Register
+    if (getRegisterValue(1, TLV320DAC3100_REG_SPK_AMP, &u8a) &&
+        getRegisterValue(1, TLV320DAC3100_REG_SPK_VOL, &u8b) &&
+        getRegisterValue(1, TLV320DAC3100_REG_SPK_VOL + 1, &u8c) &&
+        getRegisterValue(1, TLV320DAC3100_REG_SPK_DRIVER, &u8d) &&
+        getRegisterValue(1, TLV320DAC3100_REG_SPK_DRIVER + 1, &u8e)) {
+      Serial.printf("P1:SPK_AMP(0x%02x)=0x%02x(D7=%u,D6=%u,D5:D1=%u,D0=%u), SPL_VOL(0x%02x)=0x%02x(D7=%u,D6:D0=%u), "
+                    "SPR_VOL(0x%02x)=0x%02x(D7=%u,D6:D0=%u),\n   SPL_DRV(0x%02x)=0x%02x(D7:D5=%u,D4:D3=%u,D2=%u,D1=%u,D0=%u), "
+                    "SPR_DRV(0x%02x)=0x%02x(D7:D5=%u,D4:D3=%u,D2=%u,D1=%u,D0=%u)\n",
+                    TLV320DAC3100_REG_SPK_AMP, u8a, (u8a>>7)&0x01, (u8a>>6)&0x01, (u8a>>1)&0x1F, u8a&0x01,
+                    TLV320DAC3100_REG_SPK_VOL, u8b, (u8b>>7)&0x01, u8b&0x7F,
+                    TLV320DAC3100_REG_SPK_VOL + 1, u8c, (u8c>>7)&0x01, u8c&0x7F,
+                    TLV320DAC3100_REG_SPK_DRIVER, u8d, (u8d>>5)&0x07, (u8d>>3)&0x03, (u8d>>2)&0x01, (u8d>>1)&0x01, u8d&0x01,
+                    TLV320DAC3100_REG_SPK_DRIVER + 1, u8e, (u8e>>5)&0x07, (u8e>>3)&0x03, (u8e>>2)&0x01, (u8e>>1)&0x01, u8e&0x01);
     }
   }
 

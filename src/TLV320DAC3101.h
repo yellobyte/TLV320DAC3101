@@ -34,9 +34,11 @@
 #include <Adafruit_TLV320DAC3100.h>
 
 // Page 0
-#define TLV320DAC3100_REG_DRC_CONTROL_1 0x44 // DRC Control 1 Register
-#define TLV320DAC3100_REG_DRC_CONTROL_2 0x45 // DRC Control 2 Register
-#define TLV320DAC3100_REG_DRC_CONTROL_3 0x46 // DRC Control 3 Register
+#define TLV320DAC3100_REG_DAC_INTFLAGS_S 0x2C // DAC Interrupt Flags Register (sticky bits)
+#define TLV320DAC3100_REG_DAC_INTFLAGS   0x2E // DAC Interrupt Flags Register
+#define TLV320DAC3100_REG_DRC_CONTROL_1  0x44 // DRC Control 1 Register
+#define TLV320DAC3100_REG_DRC_CONTROL_2  0x45 // DRC Control 2 Register
+#define TLV320DAC3100_REG_DRC_CONTROL_3  0x46 // DRC Control 3 Register
 
 // Pages 8/12 DAC Coefficient-RAM A/B
 #define TLV320DAC3100_REG_DAC_CRAM_CTRL 0x01 // DAC C-RAM Control Register
@@ -140,17 +142,19 @@
 //
 // selecting various DAC registers for serial printout (just for debugging purposes)
 //
-#define P0_I2S 0x0001
-#define P0_PLL 0x0002
-#define P0_DRC 0x0004
-#define Px_BQA 0x0010
-#define Px_BQB 0x0020
-#define Px_BQC 0x0040
-#define Px_BQD 0x0080
-#define Px_BQE 0x0100
-#define Px_BQF 0x0200
-#define Px_IIR 0x1000
-#define Px_DRC 0x2000
+#define P0_I2S 0x00001
+#define P0_PLL 0x00002
+#define P0_DRC 0x00004
+#define P0_INT 0x00008
+#define P1_SPK 0x00100
+#define Px_BQA 0x01000
+#define Px_BQB 0x02000
+#define Px_BQC 0x04000
+#define Px_BQD 0x08000
+#define Px_BQE 0x10000
+#define Px_BQF 0x20000
+#define Px_IIR 0x40000
+#define Px_DRC 0x80000
 #endif
 
 typedef enum {
@@ -249,8 +253,8 @@ typedef enum {
 } tlv320_filter_type_t;
 
 typedef struct {
-  float fc    { 0 };                   // -3dB corner frequency (LPF, HPF) or center frequency (notch, EQ, shelf)
-  float bw    { 0.0};                  // Hz, bandwidth (only notch and EQ)
+  float fc    { 0.0 };                 // -3dB corner frequency (LPF, HPF) or center frequency (notch, EQ, shelf)
+  float bw    { 0.0 };                 // Hz, bandwidth (only notch and EQ)
   float gain  { 0.0 };                 // dB, filter gain (default is 0)
   float Q     { 0.0 };                 // filter quality factor (can be given instead of bandwidth)
   //float S     { 1.0 };                 // shelfing factor for bass/treble shelf filter
@@ -276,27 +280,47 @@ typedef struct {
   uint8_t *hpf_coeffs { NULL };                      // coefficients can be given
 } tlv320_drc_param_t;
 
+typedef struct {
+  float sample_frequency { 0.0 };                            // forces the user to at least set a sample frequency
+  tlv320dac3100_format_t i2s_format                          // default I2S data format: I2S (Philips standard)    
+                         { TLV320DAC3100_FORMAT_I2S };
+  tlv320dac3100_data_len_t i2s_data_len                      // default I2S data length: 16 bits
+                         { TLV320DAC3100_DATA_LEN_16 };
+  tlv320dac3100_pll_clkin_t pll_clk_input                    // default: BCLK feeds PLL input
+                         { TLV320DAC3100_PLL_CLKIN_BCLK };
+  tlv320dac3100_codec_clkin_t codec_clk_input                // default: PLL output feeds Codec
+                         { TLV320DAC3100_CODEC_CLKIN_PLL };
+  float dac_gain_left    { 0.0 };                            // dB, default reset values as in Table 6-77
+  float dac_gain_right   { 0.0 };
+  tlv320_vol_control_t dac_gain_ctrl                         // default: volume control L/R is independent
+                         { TLV320_VOL_INDEPENDENT };
+} tlv320_init_config_t;
+
 class TLV320DAC3101 : public Adafruit_TLV320DAC3100 {
 public:
   TLV320DAC3101() : Adafruit_TLV320DAC3100() {};   // Constructor
+  bool initDAC(tlv320_init_config_t *cfg, bool dac_on = true);
+  bool initHeadphoneOutput(bool enable = true, bool lineout = false, uint8_t vol = 0);
+  bool initSpeakerOutput(bool enable = true, uint8_t vol = 0);
   bool getRegisterValue(uint8_t page, uint8_t registr, uint8_t *value);
   bool getRegisterValue(uint8_t page, uint8_t registr, uint16_t *value);
   bool enableSpeaker(bool en);
   bool configureSPK_PGA(tlv320_spk_gain_t gain, bool unmute);
-
+  bool setHeadphoneVolume(uint8_t vol, bool left_channel = true, bool right_channel = true);
+  bool setSpeakerVolume(uint8_t vol, bool left_channel = true, bool right_channel = true);
   bool setSPKVolume(bool route_enable, uint8_t gain);
   bool setDRC(bool enable, bool left_channel, bool right_channel,
-              tlv320_drc_param_t *drc_param);
+              tlv320_drc_param_t *drc_param = NULL);
   bool powerOnDAC(bool left_dac_on, bool right_dac_on);
   bool calcDACFilterCoefficients(float sample_frequency, tlv320_filter_type_t type,
                                  tlv320_filter_t filter, tlv320_filter_param_t *param);
   bool setDACFilter(bool enable, bool left_channel, bool right_channel,
-                    tlv320_filter_t filter, tlv320_filter_param_t *param);
+                    tlv320_filter_t filter, tlv320_filter_param_t *param = NULL);
   bool setAdaptiveMode(bool enable);
   bool getAdaptiveMode();
 
 #ifdef _DEBUG_
-    void printRegisterSettings(const char *s = "", uint16_t select = (uint16_t)0xFFFF);
+    void printRegisterSettings(const char *s = "", uint32_t select = (uint32_t)0xFFFFF);
 #endif
 
 private:
@@ -308,6 +332,10 @@ private:
   bool refactorB(double *b0, double *b1, double *b2);
 
   Adafruit_I2CDevice *i2c_dev = new Adafruit_I2CDevice(TLV320DAC3100_I2CADDR_DEFAULT, &Wire);
+  float m_dac_gain_l, m_dac_gain_r;
+  uint8_t m_hp_volume_l, m_hp_volume_r,
+          m_spk_volume_l, m_spk_volume_r;
+  String m_last_error { "" };
 };
 
 #endif

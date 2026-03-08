@@ -33,6 +33,11 @@ setAdaptiveMode	KEYWORD2
 getAdaptiveMode	KEYWORD2
 setDACFilter		KEYWORD2
 printRegisterSettings	KEYWORD2
+initDAC	KEYWORD2
+initHeadphoneOutput	KEYWORD2
+setHeadphoneVolume	KEYWORD2
+initSpeakerOutput	KEYWORD2
+setSpeakerVolume	KEYWORD2
   
 #######################################
 # Constants (LITERAL1)
