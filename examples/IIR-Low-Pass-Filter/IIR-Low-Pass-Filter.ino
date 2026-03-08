@@ -109,7 +109,7 @@ void setup() {
   //cfg.dac_gain_right = 5.0;                  // allowed range: -63.5...+24.0 dB
 
   if (!dac.initDAC(&cfg, false)) {           // set registers but keep DACs powered down
-    halt("Failed to initialize DAC core!");
+    halt(dac.getLastError().c_str());
   }
 
   // PRB_P3 (RC10) contains IIR filter section

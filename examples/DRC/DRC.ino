@@ -1,11 +1,8 @@
 /*
   Play Audio from SD with DRC activated/deactivated
 
-  This example plays all mp3-files from microSD card. Output goes to speaker and headphone sockets.
-  DRC (Dynamic Range Compression) is set and enabled.
-
-  "SD" library is used and requires the cards CS signal (GPIO10), therefore solder bridge
-  SD_CS must be closed [default].
+  This example plays all mp3-files from an attached SD card. Output goes to speaker 
+  and headphone sockets. DRC (Dynamic Range Compression) is set and enabled.
 
   The example accepts the following serial input:
    - d...disable DRC,
@@ -15,12 +12,12 @@
 
   The following libraries are needed:
    - SD
-   - ESP32-audioI2S v3.4.x
+   - ESP32-audioI2S
    - Adafruit_TLV320_I2S
    - Adafruit_BusIO
    - TLV320DAC3101
 
-  Last updated 2026-03-07, ThJ <yellobyte@bluewin.ch>
+  Last updated 2026-03-08, ThJ <yellobyte@bluewin.ch>
 */
 
 #include <Arduino.h>
