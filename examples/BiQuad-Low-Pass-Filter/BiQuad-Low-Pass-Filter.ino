@@ -152,6 +152,7 @@ void setup() {
                         &filterB)) {             // pointer to filter settings
     halt("Failed to set BiQuadB filter!");
   }
+  
   if (!dac.setDACFilter(true,                    // enable filtering
                         true,                    // on left channel
                         true,                    // and on right channel
@@ -189,7 +190,7 @@ void setup() {
   xTaskCreate(backgroundTask, "bgTask", 4096, NULL, 1, NULL);
   delay(100);
 
-  // The adaptive mode gets enabled with I2S bus already active and DACs powered up.
+  // adaptive mode gets enabled with I2S bus already active and DACs powered up
   dac.setAdaptiveMode(true);
 }
 
