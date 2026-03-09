@@ -25,7 +25,7 @@ In case you need to calculate and change the coefficients dynamically while your
 
 Below examples show the general use of calcDACFilterCoefficients() and setDACFilter() on typical filters.
 
-### Example 1: IIR (1st order) Low Pass Filter
+### Example 1: IIR Low Pass Filter (1st order)
 
 The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the set corner frequency get attenuated.
 
@@ -69,7 +69,7 @@ void setup()
 }
 ```
 
-### Example 2: IIR (1st order) High Pass Filter
+### Example 2: IIR High Pass Filter (1st order)
 
 The TLV320DAC3101 has an IIR (1st order) high pass filter activated only on the left audio channel. Frequencies below the set corner frequency of fc=1kHz get attenuated on that channel.
 
@@ -111,7 +111,7 @@ void setup()
 }
 ```
 
-### Example 3: BiQuad (4th order) High Pass Filter
+### Example 3: BiQuad High Pass Filter (4th order)
 
 The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Filter Q is chosen differently to keep -3dB attenuation at fc. Explanation see above.
 
@@ -160,7 +160,7 @@ void setup()
 }
 ```
 
-### Example 4: BiQuad (2nd order) Notch Filter
+### Example 4: BiQuad Notch Filter (2nd order)
 
 The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz get attenuated.
 
@@ -198,7 +198,7 @@ void setup()
 }
 ```
 
-### Example 5: BiQuad (2nd order) peaking EQ Filter
+### Example 5: BiQuad peaking EQ Filter (2nd order)
 
 The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=200Hz and peak gain=+12dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
 
@@ -237,7 +237,7 @@ void setup()
 }
 ```
 
-### Example 6: BiQuad (4th order) Bass Shelf Filter
+### Example 6: BiQuad Bass Shelf Filter (4th order)
 
 The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=800Hz and gain=+8dB per block activated. Therefore the whole frequency spectrum below 800Hz will get a constant boost.
 
