@@ -328,7 +328,7 @@ void setup()
   ...
   // set parameters for BiQuad filter block
   filter.fc = 800.0;                        // Hz, frequencies above 800Hz get boosted
-  filter.gain = 11.0;                       // dB, filter gain above fc per BiQuad block
+  filter.gain = 11.0;                       // dB, constant filter gain above fc 
 
   // calculate coefficients for Biquad filter block
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_TREBLE_SHELF,
