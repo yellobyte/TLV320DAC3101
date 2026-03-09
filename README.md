@@ -260,7 +260,7 @@ void setup()
 
 ### Example 6: BiQuad Bass Shelf Filter (4th order)
 
-I tested with a single BiQuad & 12dB gain and encountered no problems. Even two cascaded BiQuad blocks with fc=800Hz and gain=+8dB per block worked. Though I had to reduce the DAC gain with _cfg.dac_gain_left/right = -x.x_ by some amount to get this configuration stable. The picture above points at this problem. However, with a bass shelf filter the whole frequency spectrum below fc gets a constant boost.  
+I tested with a single BiQuad & 12dB gain and encountered no problems. Even two cascaded BiQuad blocks with fc=800Hz and gain=+8dB per block worked. Though I had to reduce the DAC gain with _cfg.dac_gain_left/right = -x.x_ by some amount to get this configuration stable. The picture below points at this problem. However, with a bass shelf filter the whole frequency spectrum below fc gets a constant boost.  
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_BassShelf_4th.jpg)
 
