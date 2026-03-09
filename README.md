@@ -310,7 +310,7 @@ void setup()
 
 ### Example 7: BiQuad Treble Shelf Filter (2nd order)
 
-A treble schelf filter of 2nd order, realized with a single BiQuad block. The whole frequency spectrum above fc gets a constant boost.  
+A treble shelf filter of 2nd order, realized with a single BiQuad block. The whole frequency spectrum above fc gets a constant boost.  
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_TrebleShelf_2nd.jpg)
 
