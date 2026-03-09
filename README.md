@@ -13,17 +13,17 @@ To install the library into your **IDE** open the **Library Manager**, search fo
 
 The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order.  
 
-For example, a typical Butterworth low pass filter (LPF) realized with a single BiQuad (2nd order) has a Q of **0.707** (1/SQRT(2)) and decreases at −12 dB per octave. 
+For example, a typical Butterworth low pass filter (LPF) realized with a single BiQuad (2nd order) has a Q of **0.707** (1/SQRT(2)) and decreases at −12dB/octave resp. -40dB/decade (JFYI: -6dB/octave resp. -20dB/decade for a 1st order one). 
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LFP_2th_Butterworth.jpg)
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_2nd_Butterworth.jpg)
 
 To get a LPF of higher order and therefore sharper filter curve you could simply cascade 2 BiQuad Butterworth LPFs. Disappointingly, your -3dB point at the LPF corner frequency fc turns into a -6dB point with the two BiQuad Butterworths cascaded and the achieved filter curve looks slightly different from the expected one. In order to regain your -3dB point at fc you simply need to set Q of the two cascaded BiQuads differently, in this case one to Q1=1/0.7654(**1.307**) and the other one to Q2=1/1.8478(**0.541**). Such 4th order LPF would decrease at −24 dB per octave.
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LFP_4th_diffQ.jpg)
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_4th_diffQ.jpg)
 
 You can go further. With 3 BiQuads cascaded you create a LPF (or HPF) with even sharper curve. In this case you need to set the three Qs to Q1=1/0.517638(**1.932**), Q2=1/SQRT(2)(**0.7071**) and Q3=1/1.931852(**0.518**). Demonstrated in example [LPF](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/BiQuad-Low-Pass-Filter).
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LFP_6th_diffQ.jpg)
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_6th_diffQ.jpg)
 
 However, BiQuads and esp. cascaded filter systems can get unstable very quickly by setting slightly wrong coefficients, chosing the overall filter gain too high, etc. So in order to avoid this in your special audio project, you could start with a filter of lower order, bigger bandwidth (notch, EQ) and lower gain, test it to be stable and then if needed decrease bandwidth, increase gain and order (one IIR block + one BiQuad block make 3rd order, two BiQuads make 4th order, etc.).
 
@@ -36,6 +36,8 @@ In case you need to calculate and change the coefficients dynamically while your
 Below examples show the general use of calcDACFilterCoefficients() and setDACFilter() on typical filters.
 
 ### Example 1: IIR Low Pass Filter (1st order)
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_1st_Butterworth.jpg)
 
 The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the set corner frequency get attenuated.
 
@@ -81,6 +83,8 @@ void setup()
 
 ### Example 2: IIR High Pass Filter (1st order)
 
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_HPF_1st_Butterworth.jpg)
+
 The TLV320DAC3101 has an IIR (1st order) high pass filter activated only on the left audio channel. Frequencies below the set corner frequency of fc=1kHz get attenuated on that channel.
 
 ```c
@@ -123,7 +127,7 @@ void setup()
 
 ### Example 3: BiQuad High Pass Filter (4th order)
 
-The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Filter Q is chosen differently to keep -3dB attenuation at fc. Explanation see above.
+The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Filter Q is chosen differently to keep -3dB attenuation at fc. Picture & explanation see above.
 
 ```c
 ...
@@ -172,7 +176,9 @@ void setup()
 
 ### Example 4: BiQuad Notch Filter (2nd order)
 
-The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=300Hz. Therefore all frequencies near 1.5kHz get attenuated.
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_Notch.jpg)
+
+The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=200Hz. Therefore all frequencies near 1.5kHz get attenuated.
 
 ```c
 ...
@@ -210,7 +216,9 @@ void setup()
 
 ### Example 5: BiQuad peaking EQ Filter (2nd order)
 
-The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=200Hz and peak gain=+12dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_EQ.jpg)
+
+The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=300Hz and peak gain=+10dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
 
 ```c
 ...
@@ -226,8 +234,8 @@ void setup()
   ...
   // set parameters for the BiQuad filter block
   filter.fc = 1500.0;                            // Hz, EQ center frequency
-  filter.bw = 200.0;                             // Hz, EQ filter bandwidth
-  filter.gain = 12.0;                            // dB, EQ filter peak gain
+  filter.bw = 300.0;                             // Hz, EQ filter bandwidth
+  filter.gain = 10.0;                            // dB, EQ filter peak gain
 
   // calculate BiQuad coefficients
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_EQ,
@@ -249,7 +257,9 @@ void setup()
 
 ### Example 6: BiQuad Bass Shelf Filter (4th order)
 
-The TLV320DAC3101 has two cascaded BiQuad Bass Shelf filter blocks with fc=800Hz and gain=+8dB per block activated. Therefore the whole frequency spectrum below 800Hz will get a constant boost.
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_BassShelf_4th.jpg)
+
+I tested with a single BiQuad & 12dB gain and encountered no problems. Even two cascaded BiQuad blocks with fc=800Hz and gain=+8dB per block worked. Though I had to reduce the DAC gain (cfg.dac_gain_left = -x.x) by some value to get this configuration stable. The picture above points into this direction. However, with a bass shelf filter the whole frequency spectrum below fc gets a constant boost. 
 
 ```c
 ...
