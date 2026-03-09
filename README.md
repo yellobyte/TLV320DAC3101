@@ -21,7 +21,7 @@ To get a LPF of higher order and therefore sharper filter curve you could simply
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_4th_diffQ.jpg)
 
-You can go further. With 3 BiQuads cascaded you create a LPF (or HPF) with even sharper curve. In this case you need to set the three Qs to Q1=1/0.517638(**1.932**), Q2=1/SQRT(2)(**0.7071**) and Q3=1/1.931852(**0.518**). Demonstrated in example [LPF](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/BiQuad-Low-Pass-Filter).
+You can go further. With 3 BiQuads cascaded you create an even more aggressive LPF (or HPF). In this case you need to set the three Qs to Q1=1/0.517638(**1.932**), Q2=1/SQRT(2)(**0.7071**) and Q3=1/1.931852(**0.518**). Demonstrated in example [LPF](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/BiQuad-Low-Pass-Filter).
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_6th_diffQ.jpg)
 
@@ -29,7 +29,7 @@ However, BiQuads and esp. cascaded filter systems can get unstable very quickly 
 
 A very good point to start from is Texas Instrument's [**COEFFICIENT-CALC — Coefficient Calculator For Digital Biquad Filters**](https://www.ti.com/tool/COEFFICIENT-CALC) with graphical user interface (GUI). It targets TI's TLV320 product series and shows the filter curves of single and/or cascaded filter blocks, lets you play with frequency, gain, bandwidth, Q and even indicates if a setting becomes unstable. It calculates all filter coefficients for you and makes it very simple to get good results quickly.
 
-Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters and additionally N2 & D2 for 2nd order filters) and program them into a IIR/BiQuad filter block with function setDACFilter().
+Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters and additionally N2 & D2 for 2nd order filters) and write them into the IIR/BiQuad filter block(s) with function setDACFilter().
 
 In case you need to calculate and change the coefficients dynamically while your program is running you can first call calcDACFilterCoefficients() before writing them with setDACFilter().
 
@@ -37,9 +37,9 @@ Below examples show the general use of calcDACFilterCoefficients() and setDACFil
 
 ### Example 1: IIR Low Pass Filter (1st order)
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_1st_Butterworth.jpg)
+The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the -3dB corner frequency get attenuated. Such filter decreases with -6dB/octave resp. -20dB/decade.  
 
-The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the set corner frequency get attenuated.
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_1st_Butterworth.jpg)
 
 ```c
 ...
@@ -83,9 +83,10 @@ void setup()
 
 ### Example 2: IIR High Pass Filter (1st order)
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_HPF_1st_Butterworth.jpg)
 
-The TLV320DAC3101 has an IIR (1st order) high pass filter activated only on the left audio channel. Frequencies below the set corner frequency of fc=1kHz get attenuated on that channel.
+The TLV320DAC3101 has an IIR (1st order) high pass filter activated only on the left audio channel. Frequencies below the -3dB corner frequency of fc=1kHz get attenuated on that channel.  
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_HPF_1st_Butterworth.jpg)
 
 ```c
 ...
@@ -176,9 +177,10 @@ void setup()
 
 ### Example 4: BiQuad Notch Filter (2nd order)
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_Notch.jpg)
 
-The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=200Hz. Therefore all frequencies near 1.5kHz get attenuated.
+The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=200Hz. Therefore all frequencies near 1.5kHz get attenuated.  
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_Notch.jpg)
 
 ```c
 ...
@@ -216,9 +218,10 @@ void setup()
 
 ### Example 5: BiQuad peaking EQ Filter (2nd order)
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_EQ.jpg)
 
-The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=300Hz and peak gain=+10dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost.
+The TLV320DAC3101 has a single BiQuad EQ filter with center frequency fc=1.5kHz, bandwidth bw=300Hz and peak gain=+10dB activated. Therefore all frequencies near 1.5kHz will get a moderate boost. If you encounter an unstable filter then increase the bandwidth or reduce the DAC gain by some amount with _cfg.dac_gain_left/right = -x.x_ in your program.
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_EQ.jpg)
 
 ```c
 ...
@@ -257,9 +260,9 @@ void setup()
 
 ### Example 6: BiQuad Bass Shelf Filter (4th order)
 
-![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_BassShelf_4th.jpg)
+I tested with a single BiQuad & 12dB gain and encountered no problems. Even two cascaded BiQuad blocks with fc=800Hz and gain=+8dB per block worked. Though I had to reduce the DAC gain (_cfg.dac_gain_left/right = -x.x_) by some amount to get this configuration stable. The picture above points at this problem. However, with a bass shelf filter the whole frequency spectrum below fc gets a constant boost.  
 
-I tested with a single BiQuad & 12dB gain and encountered no problems. Even two cascaded BiQuad blocks with fc=800Hz and gain=+8dB per block worked. Though I had to reduce the DAC gain (cfg.dac_gain_left = -x.x) by some value to get this configuration stable. The picture above points into this direction. However, with a bass shelf filter the whole frequency spectrum below fc gets a constant boost. 
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_BassShelf_4th.jpg)
 
 ```c
 ...
@@ -273,11 +276,11 @@ tlv320_filter_param_t filter;
 void setup()
 {
   ...
-  // set parameters for BiQuad filter blocks
-  filter.fc = 800.0;                             // Hz, frequencies below 800Hz get boosted
-  filter.gain = 8.0;                             // dB, filter gain below fc per BiQuad block
-                                                 // Note: setting the overall gain too high might cause
-                                                 // the filter to become unstable!
+  // set parameters for the two BiQuad filter blocks
+  filter.fc = 800.0;                          // Hz, frequencies below 800Hz get boosted
+  filter.gain = 8.0;                          // dB, filter gain below fc per BiQuad block
+                                              // Note: setting the overall gain too high might cause
+                                              // the filters to become unstable!
 
   // calculate coefficients for Biquad filter blocks
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_BASS_SHELF,
@@ -304,7 +307,47 @@ void setup()
   ...
 }
 ```
-### Example 7: Disable filter block BiQuadA on both channels
+
+### Example 7: BiQuad Treble Shelf Filter (2nd order)
+
+A treble schelf filter of 2nd order, realized with a single BiQuad block. The whole frequency spectrum above fc gets a constant boost.  
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_TrebleShelf_2nd.jpg)
+
+```c
+...
+#include "TLV320DAC3101.h"
+
+#define SAMPLERATE_HZ 48000
+
+TLV320DAC3101 dac;
+tlv320_filter_param_t filter;
+
+void setup()
+{
+  ...
+  // set parameters for BiQuad filter block
+  filter.fc = 800.0;                        // Hz, frequencies above 800Hz get boosted
+  filter.gain = 11.0;                       // dB, filter gain above fc per BiQuad block
+
+  // calculate coefficients for Biquad filter block
+  if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ, TLV320_FILTER_TYPE_TREBLE_SHELF,
+                                     TLV320_FILTER_BIQUAD, &filter)) {
+    halt("Failed to calculate BiQuad filter coefficients!");
+  }
+
+  // write calculated filter coefficients into BiQuadA signal processing block
+  if (!dac.setDACFilter(true,                    // enable filtering
+                        true,                    // on left channel
+                        true,                    // and on right channel
+                        TLV320_FILTER_BIQUAD_A,  // using BiQuadA filter block
+                        &filter)) {              // pointer to filter settings
+    halt("Failed to set BiQuadA filter!");
+  }
+  ...
+}
+```
+### Example 8: Disable filter block BiQuadA on both channels
 
 ```c
   ...
@@ -318,7 +361,7 @@ void setup()
   ...
 ```
 
-### Example 8: Dynamic Range Compression (DRC)
+### Example 9: Dynamic Range Compression (DRC)
 
 An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
 
@@ -341,7 +384,7 @@ void setup()
 }
 ```
 
-### Example 9: Dynamic Range Compression (DRC) with non-standard settings
+### Example 10: Dynamic Range Compression (DRC) with non-standard settings
 
 The same as above but with user defined DRC settings:
 
@@ -378,7 +421,7 @@ void setup()
 }
 ```
 
-### Example 10: Use the integrated Beep Generator
+### Example 11: Using the integrated Beep Generator
 
 Only the digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback etc.
 
