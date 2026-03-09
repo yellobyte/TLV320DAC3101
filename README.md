@@ -11,9 +11,11 @@ To install the library into your **IDE** open the **Library Manager**, search fo
 
 ## :information_source: Code samples for audio processing with the TLV320DAC3101
 
-The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order. For example, in order to get a low pass Butterworth filter of higher order and therefore sharper filter curve you can simply cascade 2 BiQuad low pass Butterworth filters.
+The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order.  
 
-However, your -3dB point at the LPF corner frequency fc on a single BiQuad filter curve now turns into a -6dB point with the two BiQuads cascaded and your achieved filter curve will look slightly different from the expected one. A typical low pass Butterworth filter realized with a BiQuad (2nd order) has a Q of 0.707 (1/SQRT(2)). In order to regain your -3dB point at fc you now need to set Q of the two cascaded BiQuads differently, in this case one to Q=1/0.7654 and the other one to Q=1/1.8478.
+For example, in order to get a low pass Butterworth filter of higher order and therefore sharper filter curve you can simply cascade 2 BiQuad low pass Butterworth filters. However, your -3dB point at the LPF corner frequency fc on a single BiQuad filter curve now turns into a -6dB point with the two BiQuads cascaded and your achieved filter curve will look slightly different from the expected one. A typical low pass Butterworth filter realized with a BiQuad (2nd order) has a Q of 0.707 (1/SQRT(2)). In order to regain your -3dB point at fc you now need to set Q of the two cascaded BiQuads differently, in this case one to Q=1/0.7654(1.307) and the other one to Q=1/1.8478(0.541).
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LFP_4th_diffQ.jpg)
 
 BiQuads and esp. cascaded filter systems can get unstable very quickly by setting slightly wrong coefficients, chosing the overall filter gain too high, etc. So in order to avoid this, you could start with a filter of lower order, bigger bandwidth (notch, EQ) and lower gain, test it to be stable and then if needed decrease bandwidth, increase gain and order (one IIR block + one BiQuad block makes 3rd order, two BiQuads make 4th order, etc.).
 
