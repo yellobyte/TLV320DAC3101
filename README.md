@@ -25,7 +25,7 @@ You can go further. With 3 BiQuads cascaded you create an even more aggressive L
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_6th_diffQ.jpg)
 
-However, BiQuads and esp. cascaded filter systems can get unstable very quickly by setting slightly wrong coefficients, chosing the overall filter gain too high, etc. So in order to avoid this in your special audio project, you could start with a filter of lower order, bigger bandwidth (notch, EQ) and lower gain, test it to be stable and then if needed decrease bandwidth, increase gain and order (one IIR block + one BiQuad block make 3rd order, two BiQuads make 4th order, etc.).
+However, BiQuads and esp. cascaded filter systems can get unstable by setting wrong coefficients, chosing the overall filter gain too high, etc. So in order to avoid this in your special audio project, you could start with a filter of lower order, bigger bandwidth (notch, EQ) and lower gain, test it to be stable and then if needed decrease bandwidth, increase gain and order (one IIR block + one BiQuad block make 3rd order, two BiQuads make 4th order, etc.).
 
 A very good point to start from is Texas Instrument's [**COEFFICIENT-CALC — Coefficient Calculator For Digital Biquad Filters**](https://www.ti.com/tool/COEFFICIENT-CALC) with graphical user interface (GUI). It targets TI's TLV320 product series and shows the filter curves of single and/or cascaded filter blocks, lets you play with frequency, gain, bandwidth, Q and even indicates if a setting becomes unstable. It calculates all filter coefficients for you and makes it very simple to get good results quickly.
 
