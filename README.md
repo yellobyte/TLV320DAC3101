@@ -9,7 +9,7 @@ Integrating this library into your Arduino audio projects is easy. For detailed 
 
 To install the library into your **IDE** open the **Library Manager**, search for **TLV320DAC3101** and choose **install**, **Add to Project** or similar.
 
-## :information_source: Code samples for audio processing with the TLV320DAC3101
+## :pencil: Digital audio signal processing
 
 The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order.  
 
@@ -34,6 +34,8 @@ Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters 
 In case you need to calculate and change the coefficients dynamically while your program is running you can first call calcDACFilterCoefficients() before writing them with setDACFilter().
 
 Below examples show the general use of calcDACFilterCoefficients() and setDACFilter() on typical filters.
+
+## :information_source: Code samples for audio processing with the TLV320DAC3101
 
 ### Example 1: IIR Low Pass Filter (1st order)
 
