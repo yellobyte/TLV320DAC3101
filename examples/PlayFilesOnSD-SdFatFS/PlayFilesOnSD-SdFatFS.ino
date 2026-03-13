@@ -31,10 +31,10 @@
         's' sets speaker on/off
 
     Note: As when using the SD library, the SD card must be operated with SdFatFS via SPI.
-    When using the YB-ESP32-S3-DAC board from yellobyte (https://github.com/yellobyte/YB-ESP32-S3-DAC)
-    the solder bridge SD_CS must be closed [default].
+    When using the YB-ESP32-S3-DAC board (https://github.com/yellobyte/YB-ESP32-S3-DAC) then the solder bridge SD_CS
+    must be closed [default].
 
-    Last updated 2026-03-13, anp59
+    2026-03-13, anp59
 */
 
 #include <Arduino.h>
