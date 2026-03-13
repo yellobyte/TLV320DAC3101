@@ -5,7 +5,7 @@
     Unlike most implementations, the SdFatFS library is used here instead of the SD or SD_MMC libs.
     
     The following Arduino Libraries are needed:
-     - TLV320DAC3101
+     - TLV320DAC3101 (>= V1.2.0.)
      - Adafruit TLV320 I2S
      - SdFat
      - ESP32-audioI2S  (https://github.com/schreibfaul1/ESP32-audioI2S.git)
@@ -35,7 +35,6 @@
     the solder bridge SD_CS must be closed [default].
 
     Last updated 2026-03-13, anp59
-    Example was tested with the lib version 1.2.0.
 */
 
 #include <Arduino.h>
