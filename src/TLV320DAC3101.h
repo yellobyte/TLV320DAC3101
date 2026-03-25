@@ -3,8 +3,8 @@
 
   The lib is build upon the Adafruit TLV320 I2S library and extends it with routines
   for filtering (low/high pass, notch, EQ & shelf using IIR and/or BiQuad filters),
-  dynamic range compression DRC, adaptive filtering mode and stereo speaker output
-  for the TLV320DAC3101.
+  dynamic range compression DRC, 3D effect, adaptive filtering mode and stereo
+  speaker output for the TLV320DAC3101.
 
   Copyright (c) 2025 Thomas Jentzsch
 
@@ -40,7 +40,7 @@
 #define TLV320DAC3100_REG_DRC_CONTROL_2  0x45 // DRC Control 2 Register
 #define TLV320DAC3100_REG_DRC_CONTROL_3  0x46 // DRC Control 3 Register
 
-// Pages 8/12 DAC Coefficient-RAM A/B
+// Pages 8/12 DAC Coefficient-RAM A/B + 3D effect PGA gain
 #define TLV320DAC3100_REG_DAC_CRAM_CTRL 0x01 // DAC C-RAM Control Register
 #define TLV320DAC3100_REG_DAC_LBQA_N0H  0x02 // DAC Left BiQuadA Coeff N0 (15:8)
 #define TLV320DAC3100_REG_DAC_LBQA_N0L  0x03 // DAC Left BiQuadA Coeff N0 (7:0)
@@ -86,6 +86,31 @@
 #define TLV320DAC3100_REG_DAC_LBQD_D2H  0x28 // DAC Left BiQuadD Coeff D2 (15:8)
 #define TLV320DAC3100_REG_DAC_LBQD_D2L  0x29 // DAC Left BiQuadD Coeff D2 (7:0)
 
+#define TLV320DAC3100_REG_DAC_LBQE_N0H  0x2A // DAC Left BiQuadE Coeff N0 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQE_N0L  0x2B // DAC Left BiQuadE Coeff N0 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQE_N1H  0x2C // DAC Left BiQuadE Coeff N1 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQE_N1L  0x2D // DAC Left BiQuadE Coeff N1 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQE_N2H  0x2E // DAC Left BiQuadE Coeff N2 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQE_N2L  0x2F // DAC Left BiQuadE Coeff N2 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQE_D1H  0x30 // DAC Left BiQuadE Coeff D1 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQE_D1L  0x31 // DAC Left BiQuadE Coeff D1 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQE_D2H  0x32 // DAC Left BiQuadE Coeff D2 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQE_D2L  0x33 // DAC Left BiQuadE Coeff D2 (7:0)
+
+#define TLV320DAC3100_REG_DAC_LBQF_N0H  0x34 // DAC Left BiQuadF Coeff N0 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQF_N0L  0x35 // DAC Left BiQuadF Coeff N0 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQF_N1H  0x36 // DAC Left BiQuadF Coeff N1 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQF_N1L  0x37 // DAC Left BiQuadF Coeff N1 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQF_N2H  0x38 // DAC Left BiQuadF Coeff N2 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQF_N2L  0x39 // DAC Left BiQuadF Coeff N2 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQF_D1H  0x3A // DAC Left BiQuadF Coeff D1 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQF_D1L  0x3B // DAC Left BiQuadF Coeff D1 (7:0)
+#define TLV320DAC3100_REG_DAC_LBQF_D2H  0x3C // DAC Left BiQuadF Coeff D2 (15:8)
+#define TLV320DAC3100_REG_DAC_LBQF_D2L  0x3D // DAC Left BiQuadF Coeff D2 (7:0)
+
+#define TLV320DAC3100_REG_DAC_3D_PGA_GAIN_H  0x40 // DAC 3D effect PGA gain High Byte (15:8)
+#define TLV320DAC3100_REG_DAC_3D_PGA_GAIN_L  0x41 // DAC 3D effect PGA gain Low Byte (7:0)
+
 #define TLV320DAC3100_REG_DAC_RBQA_N0H  0x42 // DAC Right BiQuadA Coeff N0 (15:8)
 #define TLV320DAC3100_REG_DAC_RBQA_N0L  0x43 // DAC Right BiQuadA Coeff N0 (7:0)
 #define TLV320DAC3100_REG_DAC_RBQA_N1H  0x44 // DAC Right BiQuadA Coeff N1 (15:8)
@@ -130,7 +155,27 @@
 #define TLV320DAC3100_REG_DAC_RBQD_D2H  0x68 // DAC Right BiQuadD Coeff D2 (15:8)
 #define TLV320DAC3100_REG_DAC_RBQD_D2L  0x69 // DAC Right BiQuadD Coeff D2 (7:0)
 
-// BQE+BQF tbd
+#define TLV320DAC3100_REG_DAC_RBQE_N0H  0x6A // DAC Right BiQuadE Coeff N0 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQE_N0L  0x6B // DAC Right BiQuadE Coeff N0 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQE_N1H  0x6C // DAC Right BiQuadE Coeff N1 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQE_N1L  0x6D // DAC Right BiQuadE Coeff N1 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQE_N2H  0x6E // DAC Right BiQuadE Coeff N2 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQE_N2L  0x6F // DAC Right BiQuadE Coeff N2 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQE_D1H  0x70 // DAC Right BiQuadE Coeff D1 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQE_D1L  0x71 // DAC Right BiQuadE Coeff D1 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQE_D2H  0x72 // DAC Right BiQuadE Coeff D2 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQE_D2L  0x73 // DAC Right BiQuadE Coeff D2 (7:0)
+
+#define TLV320DAC3100_REG_DAC_RBQF_N0H  0x74 // DAC Right BiQuadF Coeff N0 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQF_N0L  0x75 // DAC Right BiQuadF Coeff N0 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQF_N1H  0x76 // DAC Right BiQuadF Coeff N1 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQF_N1L  0x77 // DAC Right BiQuadF Coeff N1 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQF_N2H  0x78 // DAC Right BiQuadF Coeff N2 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQF_N2L  0x79 // DAC Right BiQuadF Coeff N2 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQF_D1H  0x7A // DAC Right BiQuadF Coeff D1 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQF_D1L  0x7B // DAC Right BiQuadF Coeff D1 (7:0)
+#define TLV320DAC3100_REG_DAC_RBQF_D2H  0x7C // DAC Right BiQuadF Coeff D2 (15:8)
+#define TLV320DAC3100_REG_DAC_RBQF_D2L  0x7D // DAC Right BiQuadF Coeff D2 (7:0)
 
 // Page 9/13 DAC Coefficient-RAM
 #define TLV320DAC3100_REG_DAC_LIIR_N0H   0x02 // DAC Left IIR Filter Coeff N0 (15:8)
@@ -169,6 +214,7 @@
 #define P0_DRC 0x00004
 #define P0_INT 0x00008
 #define P1_SPK 0x00100
+#define Px_3D  0x00200
 #define Px_BQA 0x01000
 #define Px_BQB 0x02000
 #define Px_BQC 0x04000
@@ -304,7 +350,7 @@ typedef struct {
 
 typedef struct {
   float sample_frequency { 0.0 };                            // forces the user to at least set a sample frequency
-  tlv320dac3100_format_t i2s_format                          // default I2S data format: I2S (Philips standard)    
+  tlv320dac3100_format_t i2s_format                          // default I2S data format: I2S (Philips standard)
                          { TLV320DAC3100_FORMAT_I2S };
   tlv320dac3100_data_len_t i2s_data_len                      // default I2S data length: 16 bits
                          { TLV320DAC3100_DATA_LEN_16 };
@@ -333,6 +379,8 @@ public:
   bool setSPKVolume(bool route_enable, uint8_t gain);
   bool setDRC(bool enable, bool left_channel, bool right_channel,
               tlv320_drc_param_t *drc_param = NULL);
+  bool set3D(bool enable, float pga_gain = 1.0,
+             tlv320_filter_param_t *BiQuadA_l = NULL, tlv320_filter_param_t *BiQuadA_r = NULL);
   bool powerOnDAC(bool left_dac_on, bool right_dac_on);
   bool calcDACFilterCoefficients(float sample_frequency, tlv320_filter_type_t type,
                                  tlv320_filter_t filter, tlv320_filter_param_t *param);
@@ -355,7 +403,7 @@ private:
   bool refactorB(double *b0, double *b1, double *b2);
 
   Adafruit_I2CDevice *i2c_dev = new Adafruit_I2CDevice(TLV320DAC3100_I2CADDR_DEFAULT, &Wire);
-  float m_dac_gain_l { 0.0 }, 
+  float m_dac_gain_l { 0.0 },
         m_dac_gain_r { 0.0 };
   uint8_t m_hp_volume_l, m_hp_volume_r,
           m_spk_volume_l, m_spk_volume_r;

@@ -3,8 +3,8 @@
 
   The lib is build upon the Adafruit TLV320 I2S library and extends it with routines
   for filtering (low/high pass, notch, EQ & shelf using IIR and/or BiQuad filters),
-  dynamic range compression DRC, adaptive filtering mode and stereo speaker output
-  for the TLV320DAC3101.
+  dynamic range compression DRC, 3D effect, adaptive filtering mode and stereo
+  speaker output for the TLV320DAC3101.
 
   Copyright (c) 2025 Thomas Jentzsch
 
@@ -74,19 +74,23 @@ bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
   //  - Ch. 6.3.11.1, PLL (6): R=1...16, J=1...63, D=0...9999, P=1...8,
   //  - Ch. 6.3.11.1, PLL (7): 512kHz <= PLL_CLKIN <= 20MHz, 80MHz <= PLL_CLKOUT <= 110MHz and
   //                           4 <= R * J <= 256
-  //  - Ch. 6.3.10.14, DAC:    2.8MHz < DOSR * DAC_FSAMPLE < 6.2MHz,
-  //                           MDAC * DOSR / 32 ≥ RC (e.g. RC=8 for PRB_P1, RC=12 for PRB_P2)
-  //  - Ch. 6.3.11, DAC:       NDAC,MDAC=1,2...128, DOSR=1,2...1024
+  //  - Ch. 6.3.10.14, DAC:    2.8MHz < DOSR * DAC_FSAMPLE < 6.2MHz, NDAC should be as large as possible
+  //                           as long as the following condition can still be met:
+  //                           MDAC * DOSR / 32 ≥ RC (RC depends on chosen processing block, see Table 6-11).
+  //                           DOSR must be a multiple of 8 when using interpolation filter A,
+  //                           of 4 when using filter B and of 2 when using filter C.
+  //  - Ch. 6.3.11, DAC:       Allowed value range: NDAC,MDAC=1,2...128, DOSR=1,2...1024
   // Chapter 6.3.11.1, Table 6-28 gives some PLL Example Configurations for typical scenarios.
   //
-  // Below table shows adequate settings for common sample frequencies (sample width 16bit, stereo):
+  // Below table shows adequate settings for common sample frequencies (sample width=16bit, stereo):
+  //  (* settings used in code below)
   //
   // DAC_FSAMPLE|BLCK=PLL_CLKIN|PLL_CLKOUT=CODEC_CLKIN |DOSR*DAC_FSAMPLE| R*J |NDAC*MDAC|MDAC*DOSR/32 |
   //            | 0.5<=f<=20M  | P,R,J,D: 80<=f<=110M  | DOSR:          |<=256|         |    >=RC     |
   // -----------|--------------|-----------------------|----------------|-----|---------|-------------|
   //   16000    |  0.5120MHz   | 1,4,48,0:  98.3040MHz | 192: 3.0720MHz | 192 | 32: 8*4 | 4*192/32=24 |*
-  //   22050    |  0.7056MHz   | 1,4,32,0:  90.3168MHZ | 128: 2.8224MHz | 128 | 32: 8*4 | 4*128/32=16 |*
-  //   22050    |  0.7056MHz   | 1,4,36,0: 101.6064MHZ | 192: 4.2336MHz | 144 | 24:12*2 | 2*192/32=12 |
+  //   22050    |  0.7056MHz   | 1,4,32,0:  90.3168MHZ | 128: 2.8224MHz | 128 | 32: 8*4 | 4*128/32=16 |
+  //   22050    |  0.7056MHz   | 1,4,36,0: 101.6064MHZ | 192: 4.2336MHz | 144 | 24:12*2 | 2*192/32=12 |*
   //   32000    |  1.0240MHz   | 1,2,48,0:  98.3040MHz | 128: 4.0960MHz |  96 | 24:12*2 | 2*128/32=8  |
   //   32000    |  1.0240MHz   | 1,2,48,0:  98.3040MHz | 128: 4.0960MHz |  96 | 24: 6*4 | 4*128/32=16 |*
   //   44100    |  1.4112MHz   | 1,2,32,0:  90.3168MHz | 128: 5.6448MHz |  64 | 16: 8*2 | 2*128/32=8  |
@@ -99,7 +103,7 @@ bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
     R = 4; J = 48; NDAC = 8; MDAC = 4; DOSR = 192;
   }
   else if (cfg->sample_frequency == 22050) {
-    R = 4; J = 32; NDAC = 8; MDAC = 4; DOSR = 128;
+    R = 4; J = 36; NDAC = 12; MDAC = 2; DOSR = 192;
   }
   else if (cfg->sample_frequency == 32000) {
     R = 2; J = 48; NDAC = 6; MDAC = 4; DOSR = 128;
@@ -786,7 +790,7 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
 
   uint16_t addr;
   uint8_t *coeffs;
-  bool adaptive_mode, left_dac_on_orig, left_dac_on, right_dac_on_orig, right_dac_on,
+  bool adaptive_mode, left_dac_on = false, right_dac_on = false,
        left_mute_orig = false, right_mute_orig = false;
   float left_vol_orig = 0, right_vol_orig = 0;
 
@@ -813,11 +817,12 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
   if (!setPage(8)) return false;
   adaptive_mode = cram_adaptive.read();
 
-  if (!setPage(0)) return false;
-  left_dac_on_orig = left_dac_on = left_power.read();
-  right_dac_on_orig = right_dac_on = right_power.read();
-
   if (!adaptive_mode) {
+    if (!setPage(0)) return false;
+
+    left_dac_on = left_power.read();
+    right_dac_on = right_power.read();
+
     // ramp down procedure as recommended in Ch. 6.3.10.9, figure 6-18
     if (left_dac_on && left_channel) {
       left_mute_orig = left_mute_bit.read();
@@ -927,7 +932,7 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
     // ramp up procedure as recommended in Ch. 6.3.10.9, figure 6-18
     if (!setPage(0)) return false;
 
-    if (left_dac_on_orig && left_channel) {
+    if (left_dac_on && left_channel) {
       if (!left_power.write(true)) return false;  // power up left DAC
       delay(20);
       if (!left_mute_bit.write(left_mute_orig)) return false;
@@ -935,7 +940,141 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
       while (!lpga_bit.read()) {};
     }
 
-    if (right_dac_on_orig && right_channel) {
+    if (right_dac_on && right_channel) {
+      if (!right_power.write(true)) return false; // power up right DAC
+      delay(20);
+      if (!right_mute_bit.write(right_mute_orig)) return false;
+      if (!setChannelVolume(true, right_vol_orig)) return false;
+      while (!rpga_bit.read()) {};
+    }
+  }
+
+  return true;
+}
+
+#ifdef _DEBUG_
+__attribute__((optimize("O0")))
+#endif
+bool TLV320DAC3101::set3D(bool enable, float pga_gain, tlv320_filter_param_t *BiQuadA_l, tlv320_filter_param_t *BiQuadA_r)
+{
+  // default coefficients for setting a BiQuad to linear (default)
+  uint8_t defaultCoeffs[10] = { 0x7F, 0xFF, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };
+
+  uint16_t gain;
+  uint8_t pb, gain_h, gain_l, *coeffsA_l, *coeffsA_r;
+  bool adaptive_mode, left_dac_on, right_dac_on, left_mute_orig = false, right_mute_orig = false;
+  float left_vol_orig = 0, right_vol_orig = 0;
+
+  pb = getDACProcessingBlock();
+  if (pb != 23 && pb != 24 && pb != 25) return false;
+
+  Adafruit_BusIO_Register reg3D_h = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_3D_PGA_GAIN_H);
+  Adafruit_BusIO_Register reg3D_l = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_3D_PGA_GAIN_L);
+
+  Adafruit_BusIO_Register dac_biquad_a_l = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_LBQA_N0H);
+  Adafruit_BusIO_Register dac_biquad_a_r = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_RBQA_N0H);
+
+  Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
+  Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
+  Adafruit_BusIO_RegisterBits rpga_bit(&flag2_reg, 1, 0);
+
+  Adafruit_BusIO_Register vol_ctrl = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_VOL_CTRL);
+  Adafruit_BusIO_RegisterBits left_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 3);
+  Adafruit_BusIO_RegisterBits right_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 2);
+
+  Adafruit_BusIO_Register cram_ctrl_reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_CRAM_CTRL);
+  Adafruit_BusIO_RegisterBits cram_adaptive = Adafruit_BusIO_RegisterBits(&cram_ctrl_reg, 1, 2);
+  Adafruit_BusIO_RegisterBits cram_buffer_switch = Adafruit_BusIO_RegisterBits(&cram_ctrl_reg, 1, 0);
+
+  Adafruit_BusIO_Register dac_path = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_DATAPATH);
+  Adafruit_BusIO_RegisterBits left_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
+  Adafruit_BusIO_RegisterBits right_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
+
+  if (pga_gain > 1.0) pga_gain = 1.0;
+  if (pga_gain < 0.0) pga_gain = 0.0;
+
+  gain = float2Hex(pga_gain);
+  gain_h = enable ? (uint8_t)(gain >> 8) : (uint8_t)0;
+  gain_l = enable ? (uint8_t)(gain & 0xFF) : (uint8_t)0;
+  coeffsA_l = (enable && BiQuadA_l != NULL) ? &(BiQuadA_l->N0H) : defaultCoeffs;
+  coeffsA_r = (enable && BiQuadA_r != NULL) ? &(BiQuadA_r->N0H) : defaultCoeffs;
+
+  if (!setPage(8)) return false;
+  adaptive_mode = cram_adaptive.read();
+
+  if (!setPage(0)) return false;
+  left_dac_on = left_power.read();
+  right_dac_on = right_power.read();
+
+  if (!adaptive_mode) {
+    // ramp down procedure as recommended in Ch. 6.3.10.9, figure 6-18
+    if (left_dac_on) {
+      left_mute_orig = left_mute_bit.read();
+      left_vol_orig = getChannelVolume(false);
+      if (!setChannelVolume(false, -63.5)) return false;
+      while (!lpga_bit.read()) {};
+      if (!left_mute_bit.write(true)) return false;
+      delay(20);
+      if (!left_power.write(false)) return false;  // power down left DAC to get access
+    }
+    if (right_dac_on) {
+      right_mute_orig = right_mute_bit.read();
+      right_vol_orig = getChannelVolume(true);
+      if (!setChannelVolume(true, -63.5)) return false;
+      while (!rpga_bit.read()) {};
+      if (!right_mute_bit.write(true)) return false;
+      delay(20);
+      if (!right_power.write(false)) return false; // power down right DAC to get access
+    }
+  }
+
+  if (!setPage(8)) return false;   // write to C-RAM Buffer A  (A or B in adaptive mode)
+
+  // set 3D PGA gain values
+  if (!reg3D_h.write(gain_h)) return false;
+  if (!reg3D_l.write(gain_l)) return false;
+
+  // set BiQuadA coefficients
+  if (!dac_biquad_a_l.write(coeffsA_l, 10)) return false;
+  if (!dac_biquad_a_r.write(coeffsA_r, 10)) return false;
+
+  if (adaptive_mode) {
+    // we trigger a switch between buffer A and B
+    if (!cram_buffer_switch.write(true)) return false;
+
+    // Note: if the I2S audio bus is not active (externally or internally) or both(!) DACs are
+    // powered down then switching will not happen and we are stuck. The timer is our bailout.
+    uint32_t start = millis();
+
+    while (true) {
+      if (!cram_buffer_switch.read()) break;
+      if ((millis() - start) > 20) return false;
+    };
+  }
+
+  if (!setPage(12)) return false;  // write to C-RAM Buffer B (A or B in adaptive mode)
+
+    // set 3D PGA gain values
+  if (!reg3D_h.write(gain_h)) return false;
+  if (!reg3D_l.write(gain_l)) return false;
+
+  // set BiQuadA coefficients
+  if (!dac_biquad_a_l.write(coeffsA_l, 10)) return false;
+  if (!dac_biquad_a_r.write(coeffsA_r, 10)) return false;
+
+  if (!adaptive_mode) {
+    // ramp up procedure as recommended in Ch. 6.3.10.9, figure 6-18
+    if (!setPage(0)) return false;
+
+    if (left_dac_on) {
+      if (!left_power.write(true)) return false;  // power up left DAC
+      delay(20);
+      if (!left_mute_bit.write(left_mute_orig)) return false;
+      if (!setChannelVolume(false, left_vol_orig)) return false;
+      while (!lpga_bit.read()) {};
+    }
+
+    if (right_dac_on) {
       if (!right_power.write(true)) return false; // power up right DAC
       delay(20);
       if (!right_mute_bit.write(right_mute_orig)) return false;
@@ -1002,7 +1141,7 @@ bool TLV320DAC3101::refactorB(double *b0, double *b1, double *b2)
   return true;
 }
 
-String TLV320DAC3101::getLastError() 
+String TLV320DAC3101::getLastError()
 {
   return m_last_error;
 }
@@ -1014,6 +1153,7 @@ String TLV320DAC3101::getLastError()
 __attribute__((optimize("O0")))
 void TLV320DAC3101::printRegisterSettings(const char *s, uint32_t select)
 {
+  uint16_t u16a, u16b;
   uint8_t u8a, u8b, u8c, u8d, u8e, u8f, u8g, u8h, u8i;
   uint8_t buf[10];
 
@@ -1087,7 +1227,22 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint32_t select)
     }
   }
 
-  if (select & (Px_BQA | Px_BQB | Px_BQC | Px_BQD | Px_BQE | Px_BQF | Px_IIR | Px_DRC)) {
+  if (select & Px_3D) {
+    // 3D PGA gain register
+    if (getRegisterValue(8, TLV320DAC3100_REG_DAC_3D_PGA_GAIN_H, &u8a) &&
+        getRegisterValue(8, TLV320DAC3100_REG_DAC_3D_PGA_GAIN_L, &u8b) &&
+        getRegisterValue(12, TLV320DAC3100_REG_DAC_3D_PGA_GAIN_H, &u8c) &&
+        getRegisterValue(12, TLV320DAC3100_REG_DAC_3D_PGA_GAIN_L, &u8d)) {
+      Serial.printf("P8:3D_PGA:MSB(0x%02x)=0x%02x,LSB(0x%02x)=%02x\n"
+                    "P12:3D_PGA:MSB(0x%02x)=0x%02x,LSB(0x%02x)=%02x\n",
+                    TLV320DAC3100_REG_DAC_3D_PGA_GAIN_H, u8a,
+                    TLV320DAC3100_REG_DAC_3D_PGA_GAIN_L, u8b,
+                    TLV320DAC3100_REG_DAC_3D_PGA_GAIN_H, u8c,
+                    TLV320DAC3100_REG_DAC_3D_PGA_GAIN_L, u8d);
+    }
+  }
+
+  if (select & (Px_BQA | Px_BQB | Px_BQC | Px_BQD | Px_BQE | Px_BQF | Px_IIR | Px_DRC | Px_3D)) {
     // C-RAM access mode control
     if (getRegisterValue(8, TLV320DAC3100_REG_DAC_CRAM_CTRL, &u8a)) {
       Serial.printf("P8:C-RAM-Ctrl(0x%02x)=0x%02x(D2=%u,D1=%u,D0=%u)\n",

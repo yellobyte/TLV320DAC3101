@@ -38,7 +38,8 @@ configHeadphoneOutput	KEYWORD2
 setHeadphoneVolume	KEYWORD2
 configSpeakerOutput	KEYWORD2
 setSpeakerVolume	KEYWORD2
-  
+set3D	KEYWORD2
+
 #######################################
 # Constants (LITERAL1)
 #######################################

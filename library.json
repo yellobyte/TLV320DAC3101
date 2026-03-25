@@ -1,16 +1,16 @@
 {
   "name": "TLV320DAC3101",
-  "version": "1.2.0", 
+  "version": "1.3.0",
   "platforms":
   [
     "*"
-  ], 
+  ],
   "repository":
   {
     "type": "git",
     "url": "https://github.com/yellobyte/TLV320DAC3101.git"
   },
-  "frameworks": "arduino", 
+  "frameworks": "arduino",
   "keywords":
   [
     "ESP32",
@@ -24,9 +24,10 @@
     "NOTCH",
     "EQ",
     "SHELF",
-    "DRC"
+    "DRC",
+    "3D"
   ],
-  "description": "Arduino library for the Texas Instruments TLV320DAC3101 I2S Stereo Audio DAC. The lib is build upon the Adafruit TLV320 I2S library and extends it with functions for audio filtering (low/high  pass, notch, EQ & bass/treble shelf using 1st order IIR and/or 2nd order BiQuad), dynamic range compression (DRC), adaptive filtering mode and stereo speaker output for the TLV320DAC3101.",
+  "description": "Arduino library for the Texas Instruments TLV320DAC3101 I2S Stereo Audio DAC. The lib is build upon the Adafruit TLV320 I2S library and extends it with functions for audio filtering (low/high  pass, notch, EQ & bass/treble shelf using 1st order IIR and/or 2nd order BiQuad), dynamic range compression (DRC), 3D effect, adaptive filtering mode and stereo speaker output for the TLV320DAC3101.",
   "authors":
   [
     {
