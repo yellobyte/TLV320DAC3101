@@ -43,6 +43,10 @@ The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_1st_Butterworth.jpg)
 
+We need to use a processing block that provides an IIR (1st order) filter block. So in our case we use **PRB_P3** for it additionally supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps:  
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P3.jpg)
+
 ```c
 ...
 #include "TLV320DAC3101.h"
@@ -367,6 +371,11 @@ void setup()
 
 An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
 
+In our case below we use **PRB_P2** for it provides the DRC feature, supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps: 
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P2.jpg)
+
+
 ```c
 ...
 #include "TLV320DAC3101.h"
@@ -376,6 +385,11 @@ TLV320DAC3101 dac;
 void setup()
 {
   ...
+  // PRB_P2 (RC12) contains DRC filtering option
+  if (!dac.setDACProcessingBlock(2)) {
+    halt("Failed to configure Processing Block!");
+  }  
+
   if (!dac.setDRC(true,                // enable DRC
                   true,                // on left channel and
                   true,                // on right channel
@@ -404,6 +418,11 @@ tlv320_drc_param_t drc;
 void setup()
 {
   ...
+  // PRB_P2 (RC12) contains DRC filtering option
+  if (!dac.setDACProcessingBlock(2)) {
+    halt("Failed to configure Processing Block!");
+  }   
+
   // they default to standard if not set
   //drc.threshold  = TLV320_DRC_THRESHOLD_MINUS_21DB;
   //drc.hyst       = TLV320_DRC_HYST_2DB;
@@ -423,7 +442,34 @@ void setup()
 }
 ```
 
-### Example 11: Using the integrated Beep Generator
+### Example 11: 3D effect
+
+The 3D effect is a rather special audio feature. It _increases the spatial sweet spot of compact consumer electronics products_ (which TI's TLV320 series originally was designed for). Translated: it is an effect that increases the perceived audio "space" and works with headphones as well as loudspeakers. Best is you try it out for yourself and decide if it fits your project or not.
+
+In below example we use processing block **PRB_P23**: 3D feature, 2 channels (stereo) and designed for a sample frequency up to 48kHz. It is possible to adjust the characteristics of the 3D effect by using biquad A (left and right), e.g. using them as HPF filters. The provided [example](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/3D-Effect) lets you play with it.
+
+General rule for audio projects: don't overdo it. Sound effects (like 3D, reverberation, etc) should always be applied gently otherwise they might become unnerving over time if put in code statically. Let the user increase/decrease their applied level.
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P23.jpg)
+
+```c
+  ...
+  // only PRB_P23...PRB_P25 (RC8/RC12/RC12) contain 3D effect option
+  if (!dac.setDACProcessingBlock(23)) {
+    halt("Failed to configure Processing Block!");
+  }
+
+  // setting & enabling 3D effect
+  if (!dac.set3D(true,                 // enable 3D effect
+                 pgaGain3D,            // set 3D PGA gain (0.0...1.0)
+                 NULL,                 // left BiQuadA stays inactive (linear)
+                 NULL)) {              // right BiQuadA stays inactive (linear)
+    halt("Failed to set 3D effect!");
+  }
+   ...
+```
+
+### Example 12: Using the integrated Beep Generator
 
 Only the digital signal processing block PRB_P25 can generate and forward a sine-wave to the DAC. This functionality is intended e.g. for generating key-click sounds for user feedback etc.
 
