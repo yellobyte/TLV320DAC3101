@@ -149,19 +149,19 @@ void loop() {
   if (Serial.read(buf, sizeof(buf))) {
     if (*buf == 'e') {
       // enable 3D effect with BiQuads inactive
-      if (!dac.set3D(true, pgaGain3D)) {
+      p_fA = NULL;
+      if (!dac.set3D(true, pgaGain3D, p_fA)) {
         halt("Failed to enable DRC!");
       }
       Serial.println("3D enabled");
-      p_fA = NULL;
     }
     if (*buf == 'E') {
       // enable 3D effect with left BiQuadA active
-      if (!dac.set3D(true, pgaGain3D, &filterA)) {
+      p_fA = &filterA;
+      if (!dac.set3D(true, pgaGain3D, p_fA)) {
         halt("Failed to enable DRC!");
       }
       Serial.println("3D enabled (left BiquadA active)");
-      p_fA = &filterA;
     }
     else if (*buf == 'd') {
       // disable 3D effect
