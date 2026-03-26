@@ -1,7 +1,7 @@
 # TLV320DAC3101 Stereo Audio DAC
 Arduino library for the Texas Instruments TLV320DAC3101 I2S Stereo Audio DAC. The TLV320DAC3101 chip is a low-power, highly integrated, high-performance DAC with 25 selectable digital audio processing blocks (combination of 1 x IIR, 6 x BiQuad, DRC, interpolation filter, beep generator, all user programmable) and 24-bit stereo playback. It further features a Stereo Headphone or Lineout, a 1.3W 8Ω Class-D Speaker stereo output, I2S bus audio input supporting 8kHz to 192kHz sample rates, I2C bus for configuration & control and much more.
 
-The lib is build upon the [Adafruit TLV320 I2S](https://github.com/adafruit/Adafruit_TLV320_I2S) library and extends it with functions for audio filtering (low pass, high pass, notch, peaking EQ, bass shelf, treble shelf) using 1st order IIR and/or 2nd order BiQuad filter blocks (cascading is possible), dynamic range compression (DRC), adaptive filtering mode and **stereo speaker** output available on the TLV320DAC3101.
+The lib is build upon the [Adafruit TLV320 I2S](https://github.com/adafruit/Adafruit_TLV320_I2S) library and extends it with functions for audio filtering (low pass, high pass, notch, peaking EQ, bass shelf, treble shelf) using 1st order IIR and/or 2nd order BiQuad filter blocks (cascading is possible), dynamic range compression (DRC), 3D effect, adaptive filtering mode and **stereo speaker** output available on the TLV320DAC3101.
 
 Integrating this library into your Arduino audio projects is easy. For detailed infos have a look at the many [examples](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples) included. Further down you find code samples for utilizing IIR and BiQuad filtering in your audio projects.
 
@@ -31,7 +31,7 @@ A very good point to start from is Texas Instrument's [**COEFFICIENT-CALC — Co
 
 Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters and additionally N2 & D2 for 2nd order filters) and write them into the IIR/BiQuad filter block(s) with function setDACFilter().
 
-In case you need to calculate and change the coefficients dynamically while your program is running you can first call calcDACFilterCoefficients() before writing them with setDACFilter().
+In case you need to calculate and change the coefficients dynamically while your program is running, call calcDACFilterCoefficients() before writing them with setDACFilter().
 
 Below examples show the general use of calcDACFilterCoefficients() and setDACFilter() on typical filters.
 
@@ -43,7 +43,7 @@ The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_1st_Butterworth.jpg)
 
-We need to use a processing block that provides an IIR (1st order) filter block. So in our case we use **PRB_P3** for it additionally supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps:  
+We need to use a processing block that provides an IIR (1st order) filter block. So the first example uses **PRB_P3** because it additionally supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps:  
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P3.jpg)
 
@@ -371,7 +371,7 @@ void setup()
 
 An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
 
-In our case below we use **PRB_P2** for it provides the DRC feature, supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps: 
+The example below uses **PRB_P2** because it provides the DRC feature, supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps: 
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P2.jpg)
 
@@ -444,9 +444,9 @@ void setup()
 
 ### Example 11: 3D effect
 
-The 3D effect is a rather special audio feature. It _increases the spatial sweet spot of compact consumer electronics products_ (which TI's TLV320 series originally was designed for). Translated: it is an effect that increases the perceived audio "space" and works with headphones as well as loudspeakers. Best is you try it out for yourself and decide if it fits your project or not.
+The 3D effect is a rather special audio feature. It _increases the spatial sweet spot of compact consumer electronics products_ (which TI's TLV320 series was designed for). Translated: it is an effect that increases the perceived audio "space" and works with headphones as well as loudspeakers. Best is you try it out for yourself and decide if it fits your project or not.
 
-In below example we use processing block **PRB_P23**: 3D feature, 2 channels (stereo) and designed for a sample frequency up to 48kHz. It is possible to adjust the characteristics of the 3D effect by using biquad A (left and right), e.g. using them as HPF filters. The provided [example](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/3D-Effect) lets you play with it.
+Below example uses processing block **PRB_P23**: 3D feature, 2 channels (stereo) and designed for a sample frequency up to 48kHz. It is possible to adjust the characteristics of the 3D effect by using biquad A (left and right), e.g. using them as filters. The provided [example](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/3D-Effect) lets you play with it.
 
 General rule for audio projects: don't overdo it. Sound effects (like 3D, reverberation, etc) should always be applied gently otherwise they might become unnerving over time if put in code statically. Let the user increase/decrease their applied level.
 
