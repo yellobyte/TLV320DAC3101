@@ -36,11 +36,11 @@ However, BiQuads and esp. cascaded filter systems can get unstable by setting wr
 
 A very good point to start from is Texas Instrument's [**COEFFICIENT-CALC — Coefficient Calculator For Digital Biquad Filters**](https://www.ti.com/tool/COEFFICIENT-CALC) with graphical user interface (GUI). It targets TI's TLV320 product series and shows the filter curves of single and/or cascaded filter blocks, lets you play with frequency, gain, bandwidth, Q and even indicates if a setting becomes unstable. It calculates all filter coefficients for you and makes it very simple to get good results quickly.
 
-Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters and additionally N2 & D2 for 2nd order filters) and write them into the IIR/BiQuad filter block(s) with function setDACFilter().
+Then take the calculated filter coefficients (N0, N1 & D1 for 1st order filters and additionally N2 & D2 for 2nd order filters) and write them into the IIR/BiQuad filter block(s) with function _setDACFilter()_.
 
-In case you need to calculate and change the coefficients dynamically while your program is running, call calcDACFilterCoefficients() before writing them with setDACFilter().
+In case you need to calculate and change the coefficients dynamically while your program is running, call _calcDACFilterCoefficients()_ before writing them with _setDACFilter()_.
 
-Below examples show the general use of calcDACFilterCoefficients() and setDACFilter() on typical filters.
+Below examples show the general use of above mentioned functions on typical filters.
 
 ## :information_source: Code samples for audio processing with the TLV320DAC3101
 
@@ -78,7 +78,7 @@ void setup()
   if (!dac.calcDACFilterCoefficients(SAMPLERATE_HZ,                // audio sample rate
                                      TLV320_FILTER_TYPE_LOW_PASS,  // filter type
                                      TLV320_FILTER_IIR,            // 1st order filter
-                                     &filter)) {                   // keeps filter setting
+                                     &filter)) {                   // keeps filter settings
     halt("Failed to calculate IIR filter coefficients!");
   }
 
@@ -454,15 +454,24 @@ void setup()
 
 ### Example 11: 3D effect
 
-The 3D effect is a rather enhanced audio feature. It _increases the spatial sweet spot of compact consumer electronics products_ (which TI's TLV320 series was designed for). Translated: it is an effect that increases the perceived audio "space" and works both on headphones and loudspeakers. Best is you try it out for yourself and decide if it fits your project and/or you like it or not.
+The 3D effect is a rather enhanced audio feature. It increases the "spatial sweet spot" of compact consumer electronics products (which TI's TLV320 series was designed for). Translated: it is an effect that increases the perceived audio "space" and works both on headphones and loudspeakers. Best is you try it out for yourself and decide if it fits your project and/or you like it or not.
 
 Below example uses processing block **PRB_P23**: it provides the 3D feature, 2 channels (stereo) and is designed for a sample frequency up to 48kHz. It is possible to adjust the characteristics of the 3D effect by using biquad A (left and right are cascaded). The provided [example](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/3D-Effect) lets you play with it.
 
-General rule for audio projects: don't overdo things. Sound effects (like 3D, reverberation, etc) should always be applied gently otherwise they might become unnerving over time if put in code statically. Let the user/consumer adjust their intensity or switch them off.
+General rule for audio projects: don't overdo things. Sound effects (like 3D, reverberation, etc) should always be applied gently otherwise they might become unnerving over time if put in code statically. Let the user/consumer adjust their intensity or even switch them off.
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P23.jpg)
 
 ```c
+...
+#include "TLV320DAC3101.h"
+
+TLV320DAC3101 dac;
+float pgaGain3D = 0.6;      // initial value, sets the intensity of the effect
+                            // allowed range: 0.0(min)...1.0(max)
+
+void setup()
+{
   ...
   // only PRB_P23...PRB_P25 (RC8/RC12/RC12) contain 3D effect option
   if (!dac.setDACProcessingBlock(23)) {
