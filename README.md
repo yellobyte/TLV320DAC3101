@@ -11,17 +11,24 @@ To install the library into your **IDE** open the **Library Manager**, search fo
 
 ## :pencil: Digital audio signal processing
 
-The theory behind IIR filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order.  
+The TLV320DAC3101 implements signal-processing capabilities and interpolation filtering through fixed processing blocks. Alltogether there are 25 of them. Those predefined blocks give users the choice of how much and what type of signal processing they use and which interpolation filter gets applied. Only one processing block can be active at any time. **Default** is **PRB_P1**. Here is the complete list:  
 
-For example, a typical Butterworth low pass filter (LPF) realized with a single BiQuad (2nd order) has a Q of **0.707** (1/SQRT(2)) and decreases at −12dB/octave resp. -40dB/decade (JFYI: -6dB/octave resp. -20dB/decade for a 1st order one). 
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlocks.jpg)
+
+### Digital filtering of audio signals
+
+The theory behind infinite-impulse response (IIR) filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order.  
+
+For example, a typical Butterworth low pass filter (LPF) realized with a single BiQuad (2nd order) has a Q of **0.707** (1/SQRT(2)) and decreases at −12dB/octave resp. -40dB/decade (1st order: -6dB/octave resp. -20dB/decade). 
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_2nd_Butterworth.jpg)
 
-To get a LPF of higher order and therefore sharper filter curve you could simply cascade 2 BiQuad Butterworth LPFs. Disappointingly, your -3dB point at the LPF corner frequency fc turns into a -6dB point with the two BiQuad Butterworths cascaded and the achieved filter curve looks slightly different from the expected one. In order to regain your -3dB point at fc you simply need to set Q of the two cascaded BiQuads differently, in this case one to Q1=1/0.7654(**1.307**) and the other one to Q2=1/1.8478(**0.541**). Such 4th order LPF would decrease at −24 dB per octave.
+To get a LPF of higher order and therefore sharper filter curve you could attempt to cascade 2 BiQuad Butterworth LPFs. Disappointingly, your -3dB point at the LPF corner frequency fc turns into a -6dB point and the achieved filter curve looks slightly different from the expected one.  
+In order to regain your -3dB point at fc you simply need to set Q of the two cascaded BiQuads differently, in this case one to Q1=1/0.7654(**1.307**) and the other one to Q2=1/1.8478(**0.541**). Such 4th order LPF would decrease at −24 dB per octave.
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_4th_diffQ.jpg)
 
-You can go further. With 3 BiQuads cascaded you create an even more aggressive LPF (or HPF). In this case you need to set the three Qs to Q1=1/0.517638(**1.932**), Q2=1/SQRT(2)(**0.7071**) and Q3=1/1.931852(**0.518**). Demonstrated in example [LPF](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/BiQuad-Low-Pass-Filter).
+You can go further. With 3 BiQuads cascaded you create an even more aggressive LPF (or HPF). In this case you need to set the respective Qs to Q1=1/0.517638(**1.932**), Q2=1/SQRT(2)(**0.7071**) and Q3=1/1.931852(**0.518**). Demonstrated in example [LPF](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/BiQuad-Low-Pass-Filter).
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_6th_diffQ.jpg)
 
@@ -39,11 +46,11 @@ Below examples show the general use of calcDACFilterCoefficients() and setDACFil
 
 ### Example 1: IIR Low Pass Filter (1st order)
 
-The TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the -3dB corner frequency get attenuated. Such filter decreases with -6dB/octave resp. -20dB/decade.  
+In this example the TLV320DAC3101 has an IIR (1st order) low pass filter activated on both audio channels (left & right) and therefore frequencies above the -3dB corner frequency get attenuated. Such filter decreases with -6dB/octave resp. -20dB/decade.  
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_1st_Butterworth.jpg)
 
-We need to use a processing block that provides an IIR (1st order) filter block. So the first example uses **PRB_P3** because it additionally supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps:  
+The chosen processing block must provide an IIR (1st order) filter block. So the first example uses **PRB_P3** because it additionally supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps:  
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P3.jpg)
 
@@ -112,7 +119,7 @@ void setup()
   }
 
   // set IIR signal processing block coefficients N0, N1, D1 manually,
-  // they represent a HPF with fc=1000Hz and no gain
+  // they represent a 1st order HPF with fc=1000Hz and no gain
   filter.N0H = 0x77;
   filter.N0L = 0x78;
   filter.N1H = 0x88;
@@ -134,8 +141,11 @@ void setup()
 
 ### Example 3: BiQuad High Pass Filter (4th order)
 
-The TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Filter Q is chosen differently to keep -3dB attenuation at fc. Picture & explanation see above.
+In this example the TLV320DAC3101 has two cascaded BiQuad (2nd order) high pass filters pro channel activated. Together they form a high pass filter of 4th order per channel, which has a much steeper filter curve than a single BiQuad filter alone. Filter Q is chosen differently to keep -3dB attenuation at fc. Picture & explanation see above.
 
+Processing block **PRB_P1** is active by default, therefore no need to load a different one. It has 3 BiQuad filter blocks, supports 2 channels (stereo) and uses interpolation Filter A which is designed for sample frequencies up to 48ksps:  
+
+![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P1.jpg)
 ```c
 ...
 #include "TLV320DAC3101.h"
@@ -369,9 +379,9 @@ void setup()
 
 ### Example 9: Dynamic Range Compression (DRC)
 
-An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
+An activated DRC continuously monitors the output of the DAC. If a peaking signal is detected, the Audio DAC autonomously reduces the applied gain to avoid hard clipping and/or distortion. Special user settings can be given, however, below code sample would use recommended standard DRC settings.
 
-The example below uses **PRB_P2** because it provides the DRC feature, supports 2 channels (stereo) and contains an interpolation Filter A which is designed for sample frequencies up to 48ksps: 
+The example below uses **PRB_P2** because it provides the DRC feature, supports 2 channels (stereo) and uses the interpolation Filter A which is designed for sample frequencies up to 48ksps: 
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P2.jpg)
 
@@ -444,11 +454,11 @@ void setup()
 
 ### Example 11: 3D effect
 
-The 3D effect is a rather special audio feature. It _increases the spatial sweet spot of compact consumer electronics products_ (which TI's TLV320 series was designed for). Translated: it is an effect that increases the perceived audio "space" and works with headphones as well as loudspeakers. Best is you try it out for yourself and decide if it fits your project or not.
+The 3D effect is a rather enhanced audio feature. It _increases the spatial sweet spot of compact consumer electronics products_ (which TI's TLV320 series was designed for). Translated: it is an effect that increases the perceived audio "space" and works both on headphones and loudspeakers. Best is you try it out for yourself and decide if it fits your project and/or you like it or not.
 
-Below example uses processing block **PRB_P23**: 3D feature, 2 channels (stereo) and designed for a sample frequency up to 48kHz. It is possible to adjust the characteristics of the 3D effect by using biquad A (left and right), e.g. using them as filters. The provided [example](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/3D-Effect) lets you play with it.
+Below example uses processing block **PRB_P23**: it provides the 3D feature, 2 channels (stereo) and is designed for a sample frequency up to 48kHz. It is possible to adjust the characteristics of the 3D effect by using biquad A (left and right are cascaded). The provided [example](https://github.com/yellobyte/TLV320DAC3101/tree/main/examples/3D-Effect) lets you play with it.
 
-General rule for audio projects: don't overdo it. Sound effects (like 3D, reverberation, etc) should always be applied gently otherwise they might become unnerving over time if put in code statically. Let the user increase/decrease their applied level.
+General rule for audio projects: don't overdo things. Sound effects (like 3D, reverberation, etc) should always be applied gently otherwise they might become unnerving over time if put in code statically. Let the user/consumer adjust their intensity or switch them off.
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/ProcessingBlock_P23.jpg)
 
