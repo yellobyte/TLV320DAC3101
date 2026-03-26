@@ -952,9 +952,6 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
   return true;
 }
 
-#ifdef _DEBUG_
-__attribute__((optimize("O0")))
-#endif
 bool TLV320DAC3101::set3D(bool enable, float pga_gain, tlv320_filter_param_t *BiQuadA_l, tlv320_filter_param_t *BiQuadA_r)
 {
   // default coefficients for setting a BiQuad to linear (default)
