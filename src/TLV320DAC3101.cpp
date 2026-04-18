@@ -352,8 +352,8 @@ bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
 
   if (!setPage(0)) return false;
 
-  if (!drc1_enable_l.write(enable)) return false;
-  if (!drc1_enable_r.write(enable)) return false;
+  if (left_channel && !drc1_enable_l.write(enable)) return false;
+  if (right_channel && !drc1_enable_r.write(enable)) return false;
 
   if (!enable) return true;             // no reason to continue here, DRC has been disabled
 
