@@ -366,6 +366,7 @@ void setup()
 }
 ```
 ### Example 8: Disable filter block BiQuadA on both channels
+Disabling a filter block (IIR, BiQuad) means setting it back to default (linear) behaviour. It won't affect the audio channel anymore. 
 
 ```c
   ...
