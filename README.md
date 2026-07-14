@@ -21,11 +21,12 @@ The TLV320DAC3101 implements signal-processing capabilities and interpolation fi
 
 The theory behind infinite-impulse response (IIR) filters of 1st, 2nd (BiQuad) or even higher orders is complex. Calculating filter coefficients for filters of e.g. 4th order requests numerical calculations of the highest precision. To get around this, you can cascade multiple lower-order filters, such as first and second order.  
 
-For example, a typical Butterworth low pass filter (LPF) realized with a single BiQuad (2nd order) has a Q of **0.707** (1/SQRT(2)) and decreases at −12dB/octave resp. -40dB/decade (1st order: -6dB/octave resp. -20dB/decade). 
+For example, a typical Butterworth low pass filter (LPF) realized with a single BiQuad (2nd order) has a Q of **0.707** (1/SQRT(2)) and decreases at −12dB/octave resp. -40dB/decade. 
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_2nd_Butterworth.jpg)
 
 To get a LPF of higher order and therefore sharper filter curve you could attempt to cascade 2 BiQuad Butterworth LPFs. Disappointingly, your -3dB point at the LPF corner frequency fc turns into a -6dB point and the achieved filter curve looks slightly different from the expected one.  
+
 In order to regain your -3dB point at fc you simply need to set Q of the two cascaded BiQuads differently, in this case one to Q1=1/0.7654(**1.307**) and the other one to Q2=1/1.8478(**0.541**). Such 4th order LPF would decrease at −24 dB per octave.
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_LPF_4th_diffQ.jpg)
