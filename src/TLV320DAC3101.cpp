@@ -317,9 +317,7 @@ bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
   uint8_t drc_hpf_coeffs_default[6] = {0x7F, 0xF7, 0x80, 0x09, 0x7F, 0xEF};
 
   uint8_t *drc_lpf_coeffs, *drc_hpf_coeffs;
-  bool adaptive_mode, left_dac_on_orig, left_dac_on, right_dac_on_orig, right_dac_on,
-       left_mute_orig = false, right_mute_orig = false;
-  float left_vol_orig = 0, right_vol_orig = 0;
+  bool adaptive_mode, left_dac_on, right_dac_on;
 
   Adafruit_BusIO_Register drc1 = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_CONTROL_1);
   Adafruit_BusIO_RegisterBits drc1_enable_l = Adafruit_BusIO_RegisterBits(&drc1, 1, 6);
@@ -334,10 +332,6 @@ bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
   Adafruit_BusIO_RegisterBits drc3_attack = Adafruit_BusIO_RegisterBits(&drc3, 4, 4);
   Adafruit_BusIO_RegisterBits drc3_decay = Adafruit_BusIO_RegisterBits(&drc3, 4, 0);
 
-  Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
-  Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
-  Adafruit_BusIO_RegisterBits rpga_bit(&flag2_reg, 1, 0);
-
   Adafruit_BusIO_Register vol_ctrl = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_VOL_CTRL);
   Adafruit_BusIO_RegisterBits left_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 3);
   Adafruit_BusIO_RegisterBits right_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 2);
@@ -347,8 +341,8 @@ bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
   Adafruit_BusIO_RegisterBits cram_buffer_switch = Adafruit_BusIO_RegisterBits(&cram_ctrl_reg, 1, 0);
 
   Adafruit_BusIO_Register dac_path = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_DATAPATH);
-  Adafruit_BusIO_RegisterBits left_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
-  Adafruit_BusIO_RegisterBits right_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
+  Adafruit_BusIO_RegisterBits left_power_bit = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
+  Adafruit_BusIO_RegisterBits right_power_bit = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
 
   if (!setPage(0)) return false;
 
@@ -384,29 +378,13 @@ bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
   adaptive_mode = cram_adaptive.read();
 
   if (!setPage(0)) return false;
-  left_dac_on_orig = left_dac_on = left_power.read();
-  right_dac_on_orig = right_dac_on = right_power.read();
+  left_dac_on = left_power_bit.read();
+  right_dac_on = right_power_bit.read();
 
-  if (!adaptive_mode) {
-    // ramp down procedure as recommended in Ch. 6.3.10.9, figure 6-18
-    if (left_dac_on && left_channel) {
-      left_mute_orig = left_mute_bit.read();
-      left_vol_orig = getChannelVolume(false);
-      if (!setChannelVolume(false, -63.5)) return false;
-      while (!lpga_bit.read()) {};
-      if (!left_mute_bit.write(true)) return false;
-      delay(20);
-      if (!left_power.write(false)) return false;  // power down left DAC to get access
-    }
-    if (right_dac_on && right_channel) {
-      right_mute_orig = right_mute_bit.read();
-      right_vol_orig = getChannelVolume(true);
-      if (!setChannelVolume(true, -63.5)) return false;
-      while (!rpga_bit.read()) {};
-      if (!right_mute_bit.write(true)) return false;
-      delay(20);
-      if (!right_power.write(false)) return false; // power down right DAC to get access
-    }
+  if (!adaptive_mode && (left_dac_on || right_dac_on)) {
+    if (!rampDown(left_dac_on, right_dac_on, 
+                  &left_mute_bit, &right_mute_bit, 
+                  &left_power_bit, &right_power_bit)) return false;
   }
 
   // setting DRC LPF/HPF coefficients
@@ -442,25 +420,12 @@ bool TLV320DAC3101::setDRC(bool enable, bool left_channel, bool right_channel,
   drc_hpf = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DRC_HPF_N0H);
   if (!(drc_hpf.write(drc_hpf_coeffs, 6))) return false;
 
-  if (!adaptive_mode) {
+  if (!adaptive_mode && (left_dac_on || right_dac_on)) {
     // ramp up procedure as recommended in Ch. 6.3.10.9, figure 6-18
     if (!setPage(0)) return false;
-
-    if (left_dac_on_orig && left_channel) {
-      if (!left_power.write(true)) return false;  // power up left DAC
-      delay(20);
-      if (!left_mute_bit.write(left_mute_orig)) return false;
-      if (!setChannelVolume(false, left_vol_orig)) return false;
-      while (!lpga_bit.read()) {};
-    }
-
-    if (right_dac_on_orig && right_channel) {
-      if (!right_power.write(true)) return false; // power up right DAC
-      delay(20);
-      if (!right_mute_bit.write(right_mute_orig)) return false;
-      if (!setChannelVolume(true, right_vol_orig)) return false;
-      while (!rpga_bit.read()) {};
-    }
+    if (!rampUp(left_dac_on, right_dac_on, 
+                &left_mute_bit, &right_mute_bit, 
+                &left_power_bit, &right_power_bit)) return false;  
   }
 
   return true;
@@ -489,7 +454,8 @@ bool TLV320DAC3101::calcDACFilterCoefficients(float sample_frequency, tlv320_fil
   uint16_t N0, N1, N2, D1, D2;
 
   if (sample_frequency <= 0 || sample_frequency > 96000 ||
-      param == NULL || param->fc <= 0 || param->fc > (sample_frequency / 2) - 100) {
+      param == NULL || param->fc <= 0 || param->fc > (sample_frequency / 2) - 100 ||
+      param->gain < -12.0 || param->gain > 12.0) {
     return false;
   }
 
@@ -552,8 +518,6 @@ bool TLV320DAC3101::calcDACFilterCoefficients(float sample_frequency, tlv320_fil
     double a, d, k, s, A, F, H, Q, denominator, bw, gd, gn, tanB, wc;
     double cosW = cos(w0);
     double sinW = sin(w0);
-
-    if (param->gain < -12.0 || param->gain > 12.0) return false;
 
     switch (type) {
       case TLV320_FILTER_TYPE_LOW_PASS:
@@ -790,17 +754,11 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
 
   uint16_t addr;
   uint8_t *coeffs;
-  bool adaptive_mode, left_dac_on = false, right_dac_on = false,
-       left_mute_orig = false, right_mute_orig = false;
-  float left_vol_orig = 0, right_vol_orig = 0;
+  bool adaptive_mode, left_dac_on, right_dac_on;
 
   if (enable && param == NULL) return false;
 
   coeffs = (enable && param != NULL) ? &(param->N0H) : defaultCoeffs;
-
-  Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
-  Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
-  Adafruit_BusIO_RegisterBits rpga_bit(&flag2_reg, 1, 0);
 
   Adafruit_BusIO_Register vol_ctrl = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_VOL_CTRL);
   Adafruit_BusIO_RegisterBits left_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 3);
@@ -811,37 +769,20 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
   Adafruit_BusIO_RegisterBits cram_buffer_switch = Adafruit_BusIO_RegisterBits(&cram_ctrl_reg, 1, 0);
 
   Adafruit_BusIO_Register dac_path = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_DATAPATH);
-  Adafruit_BusIO_RegisterBits left_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
-  Adafruit_BusIO_RegisterBits right_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
+  Adafruit_BusIO_RegisterBits left_power_bit = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
+  Adafruit_BusIO_RegisterBits right_power_bit = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
 
   if (!setPage(8)) return false;
   adaptive_mode = cram_adaptive.read();
 
-  if (!adaptive_mode) {
-    if (!setPage(0)) return false;
+  if (!setPage(0)) return false;
+  left_dac_on = left_power_bit.read();
+  right_dac_on = right_power_bit.read();
 
-    left_dac_on = left_power.read();
-    right_dac_on = right_power.read();
-
-    // ramp down procedure as recommended in Ch. 6.3.10.9, figure 6-18
-    if (left_dac_on && left_channel) {
-      left_mute_orig = left_mute_bit.read();
-      left_vol_orig = getChannelVolume(false);
-      if (!setChannelVolume(false, -63.5)) return false;
-      while (!lpga_bit.read()) {};
-      if (!left_mute_bit.write(true)) return false;
-      delay(20);
-      if (!left_power.write(false)) return false;  // power down left DAC to get access
-    }
-    if (right_dac_on && right_channel) {
-      right_mute_orig = right_mute_bit.read();
-      right_vol_orig = getChannelVolume(true);
-      if (!setChannelVolume(true, -63.5)) return false;
-      while (!rpga_bit.read()) {};
-      if (!right_mute_bit.write(true)) return false;
-      delay(20);
-      if (!right_power.write(false)) return false; // power down right DAC to get access
-    }
+  if (!adaptive_mode && (left_dac_on || right_dac_on)) {
+    if (!rampDown(left_dac_on, right_dac_on, 
+                  &left_mute_bit, &right_mute_bit, 
+                  &left_power_bit, &right_power_bit)) return false;   
   }
 
   if (filter == TLV320_FILTER_IIR) {
@@ -929,24 +870,10 @@ bool TLV320DAC3101::setDACFilter(bool enable, bool left_channel, bool right_chan
   }
 
   if (!adaptive_mode) {
-    // ramp up procedure as recommended in Ch. 6.3.10.9, figure 6-18
     if (!setPage(0)) return false;
-
-    if (left_dac_on && left_channel) {
-      if (!left_power.write(true)) return false;  // power up left DAC
-      delay(20);
-      if (!left_mute_bit.write(left_mute_orig)) return false;
-      if (!setChannelVolume(false, left_vol_orig)) return false;
-      while (!lpga_bit.read()) {};
-    }
-
-    if (right_dac_on && right_channel) {
-      if (!right_power.write(true)) return false; // power up right DAC
-      delay(20);
-      if (!right_mute_bit.write(right_mute_orig)) return false;
-      if (!setChannelVolume(true, right_vol_orig)) return false;
-      while (!rpga_bit.read()) {};
-    }
+    if (!rampUp(left_dac_on, right_dac_on, 
+                &left_mute_bit, &right_mute_bit, 
+                &left_power_bit, &right_power_bit)) return false;
   }
 
   return true;
@@ -959,8 +886,7 @@ bool TLV320DAC3101::set3D(bool enable, float pga_gain, tlv320_filter_param_t *Bi
 
   uint16_t gain;
   uint8_t pb, gain_h, gain_l, *coeffsA_l, *coeffsA_r;
-  bool adaptive_mode, left_dac_on, right_dac_on, left_mute_orig = false, right_mute_orig = false;
-  float left_vol_orig = 0, right_vol_orig = 0;
+  bool adaptive_mode, left_dac_on, right_dac_on;
 
   pb = getDACProcessingBlock();
   if (pb != 23 && pb != 24 && pb != 25) return false;
@@ -971,10 +897,6 @@ bool TLV320DAC3101::set3D(bool enable, float pga_gain, tlv320_filter_param_t *Bi
   Adafruit_BusIO_Register dac_biquad_a_l = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_LBQA_N0H);
   Adafruit_BusIO_Register dac_biquad_a_r = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_RBQA_N0H);
 
-  Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
-  Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
-  Adafruit_BusIO_RegisterBits rpga_bit(&flag2_reg, 1, 0);
-
   Adafruit_BusIO_Register vol_ctrl = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_VOL_CTRL);
   Adafruit_BusIO_RegisterBits left_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 3);
   Adafruit_BusIO_RegisterBits right_mute_bit = Adafruit_BusIO_RegisterBits(&vol_ctrl, 1, 2);
@@ -984,8 +906,8 @@ bool TLV320DAC3101::set3D(bool enable, float pga_gain, tlv320_filter_param_t *Bi
   Adafruit_BusIO_RegisterBits cram_buffer_switch = Adafruit_BusIO_RegisterBits(&cram_ctrl_reg, 1, 0);
 
   Adafruit_BusIO_Register dac_path = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_DATAPATH);
-  Adafruit_BusIO_RegisterBits left_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
-  Adafruit_BusIO_RegisterBits right_power = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
+  Adafruit_BusIO_RegisterBits left_power_bit = Adafruit_BusIO_RegisterBits(&dac_path, 1, 7);
+  Adafruit_BusIO_RegisterBits right_power_bit = Adafruit_BusIO_RegisterBits(&dac_path, 1, 6);
 
   if (pga_gain > 1.0) pga_gain = 1.0;
   if (pga_gain < 0.0) pga_gain = 0.0;
@@ -1000,29 +922,12 @@ bool TLV320DAC3101::set3D(bool enable, float pga_gain, tlv320_filter_param_t *Bi
   adaptive_mode = cram_adaptive.read();
 
   if (!setPage(0)) return false;
-  left_dac_on = left_power.read();
-  right_dac_on = right_power.read();
-
-  if (!adaptive_mode) {
-    // ramp down procedure as recommended in Ch. 6.3.10.9, figure 6-18
-    if (left_dac_on) {
-      left_mute_orig = left_mute_bit.read();
-      left_vol_orig = getChannelVolume(false);
-      if (!setChannelVolume(false, -63.5)) return false;
-      while (!lpga_bit.read()) {};
-      if (!left_mute_bit.write(true)) return false;
-      delay(20);
-      if (!left_power.write(false)) return false;  // power down left DAC to get access
-    }
-    if (right_dac_on) {
-      right_mute_orig = right_mute_bit.read();
-      right_vol_orig = getChannelVolume(true);
-      if (!setChannelVolume(true, -63.5)) return false;
-      while (!rpga_bit.read()) {};
-      if (!right_mute_bit.write(true)) return false;
-      delay(20);
-      if (!right_power.write(false)) return false; // power down right DAC to get access
-    }
+  left_dac_on = left_power_bit.read();
+  right_dac_on = right_power_bit.read();
+  if (!adaptive_mode && (left_dac_on || right_dac_on)) {
+    if (!rampDown(left_dac_on, right_dac_on, 
+                  &left_mute_bit, &right_mute_bit, 
+                  &left_power_bit, &right_power_bit)) return false;
   }
 
   if (!setPage(8)) return false;   // write to C-RAM Buffer A  (A or B in adaptive mode)
@@ -1059,25 +964,81 @@ bool TLV320DAC3101::set3D(bool enable, float pga_gain, tlv320_filter_param_t *Bi
   if (!dac_biquad_a_l.write(coeffsA_l, 10)) return false;
   if (!dac_biquad_a_r.write(coeffsA_r, 10)) return false;
 
-  if (!adaptive_mode) {
-    // ramp up procedure as recommended in Ch. 6.3.10.9, figure 6-18
+  if (!adaptive_mode && (left_dac_on || right_dac_on)) {
     if (!setPage(0)) return false;
+    if (!rampUp(left_dac_on, right_dac_on, 
+                &left_mute_bit, &right_mute_bit, 
+                &left_power_bit, &right_power_bit)) return false;
+  }
 
-    if (left_dac_on) {
-      if (!left_power.write(true)) return false;  // power up left DAC
-      delay(20);
-      if (!left_mute_bit.write(left_mute_orig)) return false;
-      if (!setChannelVolume(false, left_vol_orig)) return false;
-      while (!lpga_bit.read()) {};
-    }
+  return true;
+}
 
-    if (right_dac_on) {
-      if (!right_power.write(true)) return false; // power up right DAC
-      delay(20);
-      if (!right_mute_bit.write(right_mute_orig)) return false;
-      if (!setChannelVolume(true, right_vol_orig)) return false;
-      while (!rpga_bit.read()) {};
-    }
+bool TLV320DAC3101::rampDown(bool left_dac_on, bool right_dac_on,
+                             Adafruit_BusIO_RegisterBits *left_mute_bit, Adafruit_BusIO_RegisterBits *right_mute_bit,
+                             Adafruit_BusIO_RegisterBits *left_power, Adafruit_BusIO_RegisterBits *right_power)
+{
+  // page 0 must have been set already !
+  Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
+  Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
+  Adafruit_BusIO_RegisterBits rpga_bit(&flag2_reg, 1, 0);  
+
+  // ramp down procedure as recommended in Ch. 6.3.10.9, figure 6-18
+  if (left_dac_on) {
+    m_mute_l = left_mute_bit->read();
+    m_volume_l = getChannelVolume(false);
+    if (!setChannelVolume(false, -63.5)) return false;
+    while (!lpga_bit.read()) {};
+    if (!left_mute_bit->write(true)) return false;
+  }
+  if (right_dac_on) {
+    m_mute_r = right_mute_bit->read();
+    m_volume_r = getChannelVolume(true);
+    if (!setChannelVolume(true, -63.5)) return false;
+    while (!rpga_bit.read()) {};
+    if (!right_mute_bit->write(true)) return false;
+  }
+
+  delay(20);
+
+  if (left_dac_on) {
+    if (!left_power->write(false)) return false;  // power down left DAC to get access
+  }
+  if (right_dac_on) {
+    if (!right_power->write(false)) return false; // power down right DAC to get access
+  }
+
+  return true;
+}
+
+bool TLV320DAC3101::rampUp(bool left_dac_on, bool right_dac_on,
+                           Adafruit_BusIO_RegisterBits *left_mute_bit, Adafruit_BusIO_RegisterBits *right_mute_bit,
+                           Adafruit_BusIO_RegisterBits *left_power, Adafruit_BusIO_RegisterBits *right_power)
+{
+  // page 0 must have been set already !
+  Adafruit_BusIO_Register flag2_reg(i2c_dev, TLV320DAC3100_REG_DAC_FLAG2);
+  Adafruit_BusIO_RegisterBits lpga_bit(&flag2_reg, 1, 4);
+  Adafruit_BusIO_RegisterBits rpga_bit(&flag2_reg, 1, 0); 
+
+  // ramp up procedure as recommended in Ch. 6.3.10.9, figure 6-18
+  if (left_dac_on) {
+    if (!left_power->write(true)) return false;  // power up left DAC
+  }
+  if (right_dac_on) {
+    if (!right_power->write(true)) return false; // power up right DAC
+  }
+
+  delay(20);
+
+  if (left_dac_on) {
+    if (!left_mute_bit->write(m_mute_l)) return false;
+    if (!setChannelVolume(false, m_volume_l)) return false;
+    while (!lpga_bit.read()) {};
+  }
+  if (right_dac_on) {
+    if (!right_mute_bit->write(m_mute_r)) return false;
+    if (!setChannelVolume(true, m_volume_r)) return false;
+    while (!rpga_bit.read()) {};
   }
 
   return true;

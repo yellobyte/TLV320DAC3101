@@ -396,6 +396,12 @@ public:
 
 private:
   bool setPage(uint8_t page);
+  bool rampDown(bool left_dac_on, bool right_dac_on,
+                Adafruit_BusIO_RegisterBits *left_mute_bit, Adafruit_BusIO_RegisterBits *right_mute_bit,
+                Adafruit_BusIO_RegisterBits *left_power_bit, Adafruit_BusIO_RegisterBits *right_power_bit);
+  bool rampUp(bool left_dac_on, bool right_dac_on,
+              Adafruit_BusIO_RegisterBits *left_mute_bit, Adafruit_BusIO_RegisterBits *right_mute_bit,
+              Adafruit_BusIO_RegisterBits *left_power_bit, Adafruit_BusIO_RegisterBits *right_power_bit);
   uint32_t float2Hex(double floatN, int bits = 16);
   double calculateBWoctave(double fc, double bw);
   bool normalizeForA0(double *a0, double *a1, double *a2,
@@ -403,8 +409,9 @@ private:
   bool refactorB(double *b0, double *b1, double *b2);
 
   Adafruit_I2CDevice *i2c_dev = new Adafruit_I2CDevice(TLV320DAC3100_I2CADDR_DEFAULT, &Wire);
-  float m_dac_gain_l { 0.0 },
-        m_dac_gain_r { 0.0 };
+  bool m_mute_l { false }, m_mute_r { false };
+  float m_volume_l { 0.0 }, m_volume_r { 0.0 },
+        m_dac_gain_l { 0.0 }, m_dac_gain_r { 0.0 };
   uint8_t m_hp_volume_l, m_hp_volume_r,
           m_spk_volume_l, m_spk_volume_r;
   String m_last_error { "" };
