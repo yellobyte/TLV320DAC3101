@@ -52,7 +52,7 @@ bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
   delay(10);
 
   // I2S Interface Control
-  if (!setCodecInterface(cfg->i2s_format,cfg->i2s_data_len)) {
+  if (!setCodecInterface(cfg->i2s_format, cfg->i2s_data_len)) {
     m_last_error = "Failed to configure I2S interface!";
     return false;
   }
@@ -82,7 +82,7 @@ bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
   //  - Ch. 6.3.11, DAC:       Allowed value range: NDAC,MDAC=1,2...128, DOSR=1,2...1024
   // Chapter 6.3.11.1, Table 6-28 gives some PLL Example Configurations for typical scenarios.
   //
-  // Below table shows adequate settings for common sample frequencies (sample width=16bit, stereo):
+  // Below table shows adequate settings for common sample frequencies with sample width=16bit & stereo:
   //  (* settings used in code below)
   //
   // DAC_FSAMPLE|BLCK=PLL_CLKIN|PLL_CLKOUT=CODEC_CLKIN |DOSR*DAC_FSAMPLE| R*J |NDAC*MDAC|MDAC*DOSR/32 |
@@ -97,6 +97,12 @@ bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
   //   44100    |  1.4112MHz   | 1,2,32,0:  90.3168MHz | 128: 5.6448MHz |  64 | 16: 4*4 | 4*128/32=16 |*
   //   48000    |  1.5360MHZ   | 1,2,32,0:  98.3040MHz | 128: 6.1440MHz |  64 | 16: 8*2 | 2*128/32=8  |
   //   48000    |  1.5360MHZ   | 1,2,32,0:  98.3040MHz | 128: 6.1440MHz |  64 | 16: 4*4 | 4*128/32=16 |*
+  //   88200    |  2.8224MHz   | 1,2,16,0:  90.3168MHz | 64:  5.6448MHz |  32 | 16: 4*4 | 4*64/32=8   |
+  //   88200    |  2.8224MHz   | 1,2,16,0:  90.3168MHz | 64:  5.6448MHz |  32 | 16: 2*8 | 8*64/32=16  |*
+  //   96000    |  3.0720MHZ   | 1,2,16,0:  98.3040MHz | 64:  6.1440MHz |  32 | 16: 4*4 | 4*64/32=8   |
+  //   96000    |  3.0720MHZ   | 1,2,16,0:  98.3040MHz | 64:  6.1440MHz |  32 | 16: 2*8 | 8*64/32=16  |*
+
+  m_sample_frequency = cfg->sample_frequency;
 
   // configure PLL & DAC dividers
   if (cfg->sample_frequency == 16000) {
@@ -112,8 +118,13 @@ bool TLV320DAC3101::initDAC(tlv320_init_config_t *cfg, bool dac_on)
            cfg->sample_frequency == 48000) {
     R = 2; J = 32; NDAC = 4; MDAC = 4; DOSR = 128;
   }
+  else if (cfg->sample_frequency == 88200 ||
+           cfg->sample_frequency == 96000) {
+    R = 2; J = 16; NDAC = 2; MDAC = 8; DOSR = 64;
+  }
   else {
     m_last_error = "Sample frequency not supported!";
+    m_sample_frequency = 0;
     return false;
   }
 
@@ -999,7 +1010,7 @@ bool TLV320DAC3101::rampDown(bool left_dac_on, bool right_dac_on,
     if (!right_mute_bit->write(true)) return false;
   }
 
-  delay(20);
+  delay(m_sample_frequency >= 48000 ? 20 : 25);
 
   if (left_dac_on) {
     if (!left_power->write(false)) return false;  // power down left DAC to get access
@@ -1028,7 +1039,7 @@ bool TLV320DAC3101::rampUp(bool left_dac_on, bool right_dac_on,
     if (!right_power->write(true)) return false; // power up right DAC
   }
 
-  delay(20);
+  delay(m_sample_frequency >= 48000 ? 20 : 25);
 
   if (left_dac_on) {
     if (!left_mute_bit->write(m_mute_l)) return false;
@@ -1376,10 +1387,64 @@ void TLV320DAC3101::printRegisterSettings(const char *s, uint32_t select)
     }
   }
 
+  if (select & Px_BQD) {
+    if (!setPage(8)) return;  // BiQuad C-RAM Buffer A
+
+    Adafruit_BusIO_Register reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_LBQD_N0H);
+    if (reg.read(buf, 10)) {
+      Serial.printf("P8:RAM-A:LBQD:N0H/L(0x%02x/%02x)=0x%02x/%02x, N1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "N2H/L(0x%02x/%02x)=0x%02x/%02x, D1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "D2H/L(0x%02x/%02x)=0x%02x/%02x\n",
+                    TLV320DAC3100_REG_DAC_LBQD_N0H, TLV320DAC3100_REG_DAC_LBQD_N0L, buf[0], buf[1],
+                    TLV320DAC3100_REG_DAC_LBQD_N1H, TLV320DAC3100_REG_DAC_LBQD_N1L, buf[2], buf[3],
+                    TLV320DAC3100_REG_DAC_LBQD_N2H, TLV320DAC3100_REG_DAC_LBQD_N2L, buf[4], buf[5],
+                    TLV320DAC3100_REG_DAC_LBQD_D1H, TLV320DAC3100_REG_DAC_LBQD_D1L, buf[6], buf[7],
+                    TLV320DAC3100_REG_DAC_LBQD_D2H, TLV320DAC3100_REG_DAC_LBQD_D2L, buf[8], buf[9]);
+    }
+
+    reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_RBQD_N0H);
+    if (reg.read(buf, 10)) {
+      Serial.printf("P8:RAM-A:RBQD:N0H/L(0x%02x/%02x)=0x%02x/%02x, N1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "N2H/L(0x%02x/%02x)=0x%02x/%02x, D1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "D2H/L(0x%02x/%02x)=0x%02x/%02x\n",
+                    TLV320DAC3100_REG_DAC_RBQD_N0H, TLV320DAC3100_REG_DAC_RBQD_N0L, buf[0], buf[1],
+                    TLV320DAC3100_REG_DAC_RBQD_N1H, TLV320DAC3100_REG_DAC_RBQD_N1L, buf[2], buf[3],
+                    TLV320DAC3100_REG_DAC_RBQD_N2H, TLV320DAC3100_REG_DAC_RBQD_N2L, buf[4], buf[5],
+                    TLV320DAC3100_REG_DAC_RBQD_D1H, TLV320DAC3100_REG_DAC_RBQD_D1L, buf[6], buf[7],
+                    TLV320DAC3100_REG_DAC_RBQD_D2H, TLV320DAC3100_REG_DAC_RBQD_D2L, buf[8], buf[9]);
+    }
+
+    if (!setPage(12)) return;  // BiQuad C-RAM Buffer B
+
+    reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_LBQD_N0H);
+    if (reg.read(buf, 10)) {
+      Serial.printf("P12:RAM-B:LBQD:N0H/L(0x%02x/%02x)=0x%02x/%02x, N1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "N2H/L(0x%02x/%02x)=0x%02x/%02x, D1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "D2H/L(0x%02x/%02x)=0x%02x/%02x\n",
+                    TLV320DAC3100_REG_DAC_LBQD_N0H, TLV320DAC3100_REG_DAC_LBQD_N0L, buf[0], buf[1],
+                    TLV320DAC3100_REG_DAC_LBQD_N1H, TLV320DAC3100_REG_DAC_LBQD_N1L, buf[2], buf[3],
+                    TLV320DAC3100_REG_DAC_LBQD_N2H, TLV320DAC3100_REG_DAC_LBQD_N2L, buf[4], buf[5],
+                    TLV320DAC3100_REG_DAC_LBQD_D1H, TLV320DAC3100_REG_DAC_LBQD_D1L, buf[6], buf[7],
+                    TLV320DAC3100_REG_DAC_LBQD_D2H, TLV320DAC3100_REG_DAC_LBQD_D2L, buf[8], buf[9]);
+    }
+
+    reg = Adafruit_BusIO_Register(i2c_dev, TLV320DAC3100_REG_DAC_RBQD_N0H);
+    if (reg.read(buf, 10)) {
+      Serial.printf("P12:RAM-B:RBQD:N0H/L(0x%02x/%02x)=0x%02x/%02x, N1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "N2H/L(0x%02x/%02x)=0x%02x/%02x, D1H/L(0x%02x/%02x)=0x%02x/%02x, "
+                    "D2H/L(0x%02x/%02x)=0x%02x/%02x\n",
+                    TLV320DAC3100_REG_DAC_RBQD_N0H, TLV320DAC3100_REG_DAC_RBQD_N0L, buf[0], buf[1],
+                    TLV320DAC3100_REG_DAC_RBQD_N1H, TLV320DAC3100_REG_DAC_RBQD_N1L, buf[2], buf[3],
+                    TLV320DAC3100_REG_DAC_RBQD_N2H, TLV320DAC3100_REG_DAC_RBQD_N2L, buf[4], buf[5],
+                    TLV320DAC3100_REG_DAC_RBQD_D1H, TLV320DAC3100_REG_DAC_RBQD_D1L, buf[6], buf[7],
+                    TLV320DAC3100_REG_DAC_RBQD_D2H, TLV320DAC3100_REG_DAC_RBQD_D2L, buf[8], buf[9]);
+    }
+  }  
   // tbd
-  // if (select & (Px_BQD)) {
+  // if (select & (Px_BQE)) {
   // }
-  // ....
+  // if (select & (Px_BQF)) {
+  // }
 
   if (select & Px_DRC) {
     if (!setPage(9)) return;  // DRC C-RAM Buffer A

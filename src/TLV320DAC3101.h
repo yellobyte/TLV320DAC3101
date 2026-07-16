@@ -410,7 +410,8 @@ private:
 
   Adafruit_I2CDevice *i2c_dev = new Adafruit_I2CDevice(TLV320DAC3100_I2CADDR_DEFAULT, &Wire);
   bool m_mute_l { false }, m_mute_r { false };
-  float m_volume_l { 0.0 }, m_volume_r { 0.0 },
+  float m_sample_frequency { 0.0 },
+        m_volume_l { 0.0 }, m_volume_r { 0.0 },
         m_dac_gain_l { 0.0 }, m_dac_gain_r { 0.0 };
   uint8_t m_hp_volume_l, m_hp_volume_r,
           m_spk_volume_l, m_spk_volume_r;
