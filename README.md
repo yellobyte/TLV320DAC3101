@@ -197,7 +197,7 @@ void setup()
 ### Example 4: BiQuad Notch Filter (2nd order)
 
 
-The TLV320DAC3101 has a single BiQuad notch filters activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=200Hz. Therefore all frequencies near 1.5kHz get attenuated.  
+The TLV320DAC3101 has a single BiQuad notch filter activated with a center frequency of fc=1.5kHz and a -3dB bandwidth of bw=200Hz. Therefore all frequencies near 1.5kHz get attenuated.  
 
 ![](https://github.com/yellobyte/TLV320DAC3101/raw/main/doc/TIBQ_Notch.jpg)
 
